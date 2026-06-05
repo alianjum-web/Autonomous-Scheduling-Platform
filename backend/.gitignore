@@ -1,0 +1,30 @@
+# Python virtual environment
+.venv/
+venv/
+
+# Bytecode & caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Coverage
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Secrets — use .env.example as template only
+.env
+.env.local
+.env.*.local
+
+# LangGraph runtime checkpoint
+checkpoints.db
+checkpoints.db-*
+
+# Local SQLite / debug
+*.sqlite
+*.sqlite3
