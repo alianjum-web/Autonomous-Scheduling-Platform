@@ -26,17 +26,15 @@ export function LiveChatPanel() {
     (state: RootState) => state.booking,
   );
   const { startChat, sendMessage } = useStreamingChat();
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const slotsKey = availableSlots.map((s) => s.iso).join("|");
+  const [dismissedSlotsKey, setDismissedSlotsKey] = useState<string | null>(null);
+  const drawerOpen = slotsKey.length > 0 && dismissedSlotsKey !== slotsKey;
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
-
-  useEffect(() => {
-    if (availableSlots.length > 0) setDrawerOpen(true);
-  }, [availableSlots.length]);
 
   const handleInputChange = useCallback(
     (value: string) => {
@@ -64,7 +62,7 @@ export function LiveChatPanel() {
       <BookingConfirmation
         confirmationCode={confirmationCode}
         slotStart={selectedSlot}
-        onClose={() => setDrawerOpen(false)}
+        onClose={() => setDismissedSlotsKey(slotsKey)}
       />
     );
   }
@@ -112,7 +110,7 @@ export function LiveChatPanel() {
           ) : (
             <>
               {availableSlots.length > 0 ? (
-                <Button variant="outline" onClick={() => setDrawerOpen(true)}>
+                <Button variant="outline" onClick={() => setDismissedSlotsKey(null)}>
                   Book Slot
                 </Button>
               ) : null}
@@ -134,7 +132,7 @@ export function LiveChatPanel() {
 
       <SlotBookingDrawer
         open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        onClose={() => setDismissedSlotsKey(slotsKey)}
         sessionId={sessionId}
       />
     </>

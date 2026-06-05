@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -39,7 +39,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     setTimeout(() => dismiss(id), 8000);
   }, [dismiss]);
 
-  externalShow = show;
+  useEffect(() => {
+    externalShow = show;
+    return () => {
+      externalShow = null;
+    };
+  }, [show]);
 
   return (
     <ToastContext.Provider value={{ toasts, show, dismiss }}>

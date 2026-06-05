@@ -21,7 +21,6 @@ import {
 import type { RootState } from "@/store";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-const RETRY_DELAYS = [500, 1000, 2000, 4000];
 const USE_WEBSOCKET = process.env.NEXT_PUBLIC_USE_TRIAGE_WS === "1";
 
 async function* readSseStream(response: Response): AsyncGenerator<string> {
@@ -50,7 +49,6 @@ export function useStreamingChat() {
   const messages = useSelector((state: RootState) => state.triage.messages);
   const eventSourceRef = useRef<EventSourcePolyfill | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const retryCountRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
 
   const closeStream = useCallback(() => {
