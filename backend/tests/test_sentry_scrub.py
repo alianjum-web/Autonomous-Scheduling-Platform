@@ -13,3 +13,18 @@ def test_scrub_event_redacts_message_and_exceptions():
     assert scrubbed["extra"]["patient_name"] == "[REDACTED]"
     assert scrubbed["extra"]["request_id"] == "req-1"
     assert "555-987-6543" not in scrubbed["exception"]["values"][0]["value"]
+
+
+def test_scrub_event_redacts_llm_content_fields():
+    event = {
+        "message": "upstream error",
+        "extra": {
+            "prompt": "Patient reports nausea",
+            "messages": [{"role": "user", "content": "headache"}],
+            "request_id": "req-2",
+        },
+    }
+    scrubbed = scrub_event(event, {})
+    assert scrubbed["extra"]["prompt"] == "[LLM_CONTENT_REDACTED]"
+    assert scrubbed["extra"]["messages"] == "[LLM_CONTENT_REDACTED]"
+    assert scrubbed["extra"]["request_id"] == "req-2"

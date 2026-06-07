@@ -1,0 +1,29 @@
+# Supabase CLI config — PostgreSQL schema is owned by the FastAPI backend.
+#
+# Monorepo layout (run all db:* scripts from backend/ or repo root):
+#   backend/supabase/config.toml
+#   backend/supabase/migrations/<timestamp>_name.sql
+#
+# project_id is populated by `npm run db:link` (stored in backend/.supabase/).
+# CI uses SUPABASE_PROJECT_REF + SUPABASE_ACCESS_TOKEN (see scripts/db/push.sh).
+
+project_id = "your-project-ref"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[db.migrations]
+enabled = true
+
+[db.seed]
+enabled = false
+sql_paths = ["./seed.sql"]

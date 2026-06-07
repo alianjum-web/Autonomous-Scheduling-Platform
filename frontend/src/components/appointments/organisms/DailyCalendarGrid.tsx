@@ -1,6 +1,6 @@
 "use client";
 
-import type { Appointment } from "@/store/appointmentsSlice";
+import type { Appointment } from "@/components/appointments/store/appointmentsSlice";
 
 const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
 
@@ -30,7 +30,7 @@ export function DailyCalendarGrid({ appointments, date, onSelect }: DailyCalenda
             <div className="bg-muted/30 px-2 py-3 text-xs text-muted-foreground text-right">
               {hour > 12 ? hour - 12 : hour}{hour >= 12 ? "pm" : "am"}
             </div>
-            <div className="min-h-[3rem] bg-background px-2 py-1">
+            <div className="min-h-12 bg-background px-2 py-1">
               {slotAppts.map((a) => (
                 <button
                   key={a.id}

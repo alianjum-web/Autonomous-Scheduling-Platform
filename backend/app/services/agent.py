@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncIterator
-from typing import Literal
+from typing import Any, Literal, cast
 
+import aiosqlite
+from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph import END, StateGraph
-from typing_extensions import TypedDict
+from openai.types.chat import ChatCompletionMessageParam
+from typing_extensions import NotRequired, TypedDict
 
 from app.adapters.calendar_gateway import get_available_slots
 from app.adapters.openai_client import get_openai_client_optional, phi_safe_chat_kwargs
@@ -24,6 +27,7 @@ logger = get_logger(__name__)
 
 _graph = None
 _checkpointer: AsyncSqliteSaver | None = None
+_checkpointer_conn: aiosqlite.Connection | None = None
 _stream_queues: dict[str, asyncio.Queue[str | None]] = {}
 
 IntentType = Literal[
@@ -37,19 +41,19 @@ IntentType = Literal[
 ]
 
 
-class AgentState(TypedDict, total=False):
+class AgentState(TypedDict):
     session_id: str
     tenant_id: str
-    messages: list[dict]
     latest_user_message: str
+    messages: list[dict[str, str]]
     intent: IntentType
-    rag_context: list[dict]
+    rag_context: list[dict[str, Any]]
     available_slots: list[str]
-    selected_slot: str | None
     final_response: str
     should_escalate: bool
     is_emergency: bool
     token_stream: list[str]
+    selected_slot: NotRequired[str | None]
 
 
 def _get_stream_queue(session_id: str) -> asyncio.Queue[str | None]:
@@ -75,7 +79,7 @@ async def emergency_interceptor(state: AgentState) -> AgentState:
             "is_emergency": True,
             "intent": "emergency",
             "final_response": response,
-            "token_stream": response.split(),
+            "token_stream": list(response.split()),
         }
     return {**state, "is_emergency": False}
 
@@ -89,17 +93,20 @@ async def intent_classifier(state: AgentState) -> AgentState:
             settings = get_settings()
             response = await client.chat.completions.create(
                 model=settings.openai_chat_model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "Classify patient intent. Output ONLY one of: "
-                            "faq | booking_request | slot_confirmation | cancellation | "
-                            "escalation | unknown"
-                        ),
-                    },
-                    {"role": "user", "content": state["latest_user_message"]},
-                ],
+                messages=cast(
+                    list[ChatCompletionMessageParam],
+                    [
+                        {
+                            "role": "system",
+                            "content": (
+                                "Classify patient intent. Output ONLY one of: "
+                                "faq | booking_request | slot_confirmation | cancellation | "
+                                "escalation | unknown"
+                            ),
+                        },
+                        {"role": "user", "content": state["latest_user_message"]},
+                    ],
+                ),
                 max_tokens=10,
                 temperature=0,
                 **phi_safe_chat_kwargs(),
@@ -181,7 +188,10 @@ Rules:
 - If patient seems distressed, offer to connect with a human staff member
 - For out-of-scope medical advice, politely decline and offer to connect with clinical staff"""
 
-    messages = [{"role": "system", "content": system}] + state.get("messages", [])
+    messages = cast(
+        list[ChatCompletionMessageParam],
+        [{"role": "system", "content": system}] + state.get("messages", []),
+    )
     tokens: list[str] = []
     queue = _get_stream_queue(state["session_id"])
     client = get_openai_client_optional()
@@ -265,7 +275,7 @@ async def escalation_trigger(state: AgentState) -> AgentState:
         **state,
         "should_escalate": True,
         "final_response": response,
-        "token_stream": response.split(),
+        "token_stream": list(response.split()),
     }
 
 
@@ -291,9 +301,10 @@ def route_after_slot(_state: AgentState) -> str:
 
 
 async def _get_checkpointer() -> AsyncSqliteSaver:
-    global _checkpointer
+    global _checkpointer, _checkpointer_conn
     if _checkpointer is None:
-        _checkpointer = AsyncSqliteSaver.from_conn_string("checkpoints.db")
+        _checkpointer_conn = await aiosqlite.connect("checkpoints.db")
+        _checkpointer = AsyncSqliteSaver(_checkpointer_conn)
         await _checkpointer.setup()
     return _checkpointer
 
@@ -349,7 +360,7 @@ async def run_triage_agent(
     tenant_id: str,
     message: str,
     history: list[dict] | None = None,
-) -> AsyncIterator[str]:
+) -> AsyncIterator[str | dict[str, Any]]:
     graph = await get_triage_graph()
     queue = _get_stream_queue(session_id)
 
@@ -359,11 +370,14 @@ async def run_triage_agent(
         except asyncio.QueueEmpty:
             break
 
-    config = {"configurable": {"thread_id": session_id}}
+    config: RunnableConfig = {"configurable": {"thread_id": session_id}}
     initial_state: AgentState = {
         "session_id": session_id,
         "tenant_id": tenant_id,
-        "messages": (history or []) + [{"role": "user", "content": message}],
+        "messages": cast(
+            list[dict[str, str]],
+            (history or []) + [{"role": "user", "content": message}],
+        ),
         "latest_user_message": message,
         "intent": "unknown",
         "rag_context": [],

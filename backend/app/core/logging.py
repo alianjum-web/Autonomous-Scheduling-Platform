@@ -16,7 +16,7 @@ PHI_PATTERNS: dict[str, re.Pattern[str]] = {
     "dob": re.compile(r"\b(0[1-9]|1[0-2])/(0[1-9]|[12]\d|3[01])/(19|20)\d{2}\b"),
 }
 
-PHI_FIELDS = frozenset(
+PHI_FIELDS = frozenset[str](
     {
         "patient_name",
         "patient_phone",
@@ -27,6 +27,31 @@ PHI_FIELDS = frozenset(
     }
 )
 
+# Raw LLM prompts/responses must never appear in logs — redact unconditionally.
+LLM_CONTENT_FIELDS = frozenset[str](
+    {
+        "prompt",
+        "llm_prompt",
+        "llm_response",
+        "completion",
+        "completions",
+        "messages",
+        "message_history",
+        "chat_history",
+        "raw_response",
+        "system_prompt",
+        "user_message",
+        "assistant_message",
+        "token_stream",
+        "model_input",
+        "model_output",
+    }
+)
+
+SENSITIVE_FIELDS = PHI_FIELDS | LLM_CONTENT_FIELDS
+
+_LOG_POLICY: dict[str, Any] | None = None
+
 
 def scrub_phi_text(message: str) -> str:
     for label, pattern in PHI_PATTERNS.items():
@@ -34,31 +59,46 @@ def scrub_phi_text(message: str) -> str:
     return message
 
 
-def _redact_mapping(data: dict[str, Any]) -> dict[str, Any]:
-    return {
-        key: "[REDACTED]" if key in PHI_FIELDS else scrub_phi_text(val) if isinstance(val, str) else val
-        for key, val in data.items()
-    }
+def _redact_sensitive_key(key: str, value: Any) -> Any:
+    if key in LLM_CONTENT_FIELDS:
+        return "[LLM_CONTENT_REDACTED]"
+    if key in PHI_FIELDS:
+        return "[REDACTED]"
+    return redact_value(value)
+
+
+def redact_value(value: Any) -> Any:
+    """Recursively scrub PHI patterns and sensitive field keys from log payloads."""
+    if isinstance(value, dict):
+        return {key: _redact_sensitive_key(key, val) for key, val in value.items()}
+    if isinstance(value, list):
+        return [redact_value(item) for item in value]
+    if isinstance(value, str):
+        return scrub_phi_text(value)
+    return value
+
+
+def _get_log_policy() -> dict[str, Any]:
+    global _LOG_POLICY
+    if _LOG_POLICY is None:
+        from app.core.config import get_settings
+
+        settings = get_settings()
+        _LOG_POLICY = {
+            "retention_days": settings.log_retention_days,
+            "access": settings.log_access_class,
+        }
+    return _LOG_POLICY
 
 
 def redact_phi_processor(_logger: Any, _method: str, event_dict: dict[str, Any]) -> dict[str, Any]:
-    for field in PHI_FIELDS:
-        if field in event_dict:
-            event_dict[field] = "[REDACTED]"
-
-    for key in ("event", "message"):
-        if key in event_dict:
-            event_dict[key] = scrub_phi_text(str(event_dict[key]))
-
-    extra = event_dict.get("extra_data")
-    if isinstance(extra, dict):
-        event_dict["extra_data"] = _redact_mapping(extra)
-
-    return event_dict
+    event_dict["_log_policy"] = _get_log_policy()
+    return redact_value(event_dict)
 
 
 def configure_logging(level: int = logging.INFO) -> None:
     shared_processors: list[Any] = [
+        structlog.contextvars.merge_contextvars,
         structlog.stdlib.add_log_level,
         structlog.stdlib.add_logger_name,
         structlog.stdlib.ExtraAdder(),

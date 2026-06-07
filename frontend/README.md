@@ -37,15 +37,36 @@ src/components/patient-triage/
 └── screens/        PatientChatScreen
 ```
 
-### State management
+### State management (module-colocated)
 
-- **Redux Toolkit** — `triageSlice` for chat messages, session status, streaming state
-- **RTK Query** — `store/api.ts` for server-state (session creation, future booking APIs)
-- **Hooks** — `useStreamingChat` (SSE with exponential backoff), `useAuthSession` (Supabase JWT)
+Each feature module owns its Redux slice, RTK Query endpoints, and hooks:
+
+```
+src/components/patient-triage/
+├── store/          triageSlice, bookingSlice, triageApi, bookingApi
+├── hooks/          useStreamingChat, useBookingFlow
+└── __tests__/      *.spec.ts
+
+src/components/appointments/
+├── store/          appointmentsSlice, appointmentsApi
+├── hooks/          useAppointmentSync, useEscalationWatch
+└── __tests__/      *.spec.ts
+
+src/components/clinic-docs/
+├── store/          clinicDocsSlice, clinicDocsApi
+├── hooks/          useDocumentIngestion
+└── __tests__/      *.spec.ts
+
+src/components/common/
+├── store/          baseApi, makeStore, StoreProvider
+└── hooks/          useAuthSession, useAdminGuard
+```
+
+- **Tests** — all unit tests use `__tests__/*.spec.ts` naming
 
 ### Multi-tenant routing
 
-`src/middleware.ts` extracts the subdomain from the request host and sets `x-tenant-slug` header for server components.
+`src/proxy.ts` extracts the subdomain from the request host and sets `x-tenant-slug` header for server components.
 
 ## Environment Variables
 

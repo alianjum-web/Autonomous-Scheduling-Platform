@@ -76,9 +76,9 @@ def _get_clinic_role(payload: dict) -> str | None:
 async def get_clinic_role(payload: Annotated[dict, Depends(get_jwt_payload)]) -> str | None:
     return _get_clinic_role(payload)
 
-
+# Annotated helps attach metadata to a type (payload is a dict); variable = Annotated[type_varible, data_variable]
 async def require_admin(
-    payload: Annotated[dict, Depends(get_jwt_payload)],
+    payload: Annotated[dict, Depends(get_jwt_payload)], 
 ) -> dict:
     role = _get_clinic_role(payload)
     if role not in ADMIN_ROLES:

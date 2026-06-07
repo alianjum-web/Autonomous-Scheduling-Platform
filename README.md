@@ -66,14 +66,14 @@ Autonomous-Scheduling-Platform/
 │       └── middleware.ts      # Subdomain → tenant slug routing
 │
 ├── backend/                   # FastAPI AI microservice
-│   └── app/
-│       ├── main.py            # App init, CORS, lifespan warm-up
-│       ├── api/v1/endpoints/  # triage (session, SSE stream)
-│       ├── core/              # config, security (JWT), PHI-safe logger
-│       └── services/          # LangGraph agent, Supabase client
-│
-├── supabase/
-│   └── migrations/            # PostgreSQL schema + RLS policies
+│   ├── app/
+│   │   ├── main.py            # App init, CORS, lifespan warm-up
+│   │   ├── api/v1/endpoints/  # triage (session, SSE stream)
+│   │   ├── core/              # config, security (JWT), PHI-safe logger
+│   │   └── services/          # LangGraph agent, Supabase client
+│   └── supabase/              # Supabase CLI project (run db:* from backend/)
+│       ├── config.toml
+│       └── migrations/        # PostgreSQL schema + RLS policies
 │
 ├── docker-compose.yml         # FastAPI + Redis for local development
 └── docs/                      # Detailed architecture, schema, roadmap
@@ -125,15 +125,17 @@ The FastAPI service is the sole AI processing gateway. See [docs/ARCHITECTURE.md
 
 ### 1. Database
 
-Apply the Sprint 1 migration to your Supabase project:
+Apply the schema to your Supabase project:
 
 ```bash
-# Via Supabase CLI
-supabase db push
-
-# Or run manually in the SQL editor:
-# supabase/migrations/001_initial_schema.sql
+npm install --prefix backend
+npm run db:link -- --project-ref <ref>   # once
+npm run db:validate
+npm run db:push                          # applies backend/supabase/migrations/*.sql
+npm run gen:types                        # sync frontend/src/types/database.ts
 ```
+
+Or run SQL manually in the Supabase SQL editor from `backend/supabase/migrations/`.
 
 Configure the **Custom Access Token Hook** in Supabase Dashboard → Authentication → Hooks, pointing to `public.custom_access_token_hook`.
 

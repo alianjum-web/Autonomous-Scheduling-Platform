@@ -10,7 +10,7 @@ if [[ $# -lt 1 ]]; then
   exit 2
 fi
 
-PATTERN='patient_name|patient_phone|patient_email|chief_complaint|ai_summary|[0-9]{3}-[0-9]{2}-[0-9]{4}'
+PATTERN='patient_name|patient_phone|patient_email|chief_complaint|ai_summary|"prompt"|"messages"|"llm_response"|"message_history"|[0-9]{3}-[0-9]{2}-[0-9]{4}'
 
 MATCHES=$(grep -rE "$PATTERN" "$@" 2>/dev/null | grep -v '\[REDACTED\]' | grep -v 'PHONE_REDACTED' | grep -v 'EMAIL_REDACTED' || true)
 

@@ -1,10 +1,19 @@
+import os
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+def _resolve_env_file() -> str:
+    return os.environ.get("ENV_FILE", ".env")
+
+
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=_resolve_env_file(),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     app_name: str = "Autonomous Scheduling Platform"
     debug: bool = False
@@ -40,6 +49,9 @@ class Settings(BaseSettings):
     # Observability
     sentry_dsn: str = ""
     environment: str = "development"
+    # Log retention/access — enforce at log aggregator (Railway/Grafana); emitted as _log_policy metadata
+    log_retention_days: int = 30
+    log_access_class: str = "restricted_ops"
 
     # Ingestion limits
     max_upload_bytes: int = 50 * 1024 * 1024  # 50 MB

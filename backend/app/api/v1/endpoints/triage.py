@@ -3,6 +3,7 @@ import json
 
 from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import StreamingResponse
+from jose import JWTError
 from pydantic import BaseModel
 
 from app.api.metrics import ESCALATIONS
@@ -168,35 +169,67 @@ async def triage_websocket(websocket: WebSocket, session_id: str):
     await websocket.accept()
     settings = get_settings()
 
-    try:
-        auth = websocket.headers.get("authorization", "")
-        token = auth.removeprefix("Bearer ").strip()
+    def tenant_from_bearer(raw_token: str) -> str | None:
+        token = raw_token.removeprefix("Bearer ").strip()
         if not token:
-            await websocket.close(code=4001)
-            return
-
+            return None
         payload = decode_jwt_token(token, settings)
-        tenant_id = payload.get("tenant_id") or payload.get("app_metadata", {}).get("tenant_id")
-        if not tenant_id:
-            await websocket.close(code=4003)
-            return
+        tenant = payload.get("tenant_id") or payload.get("app_metadata", {}).get("tenant_id")
+        return str(tenant) if tenant else None
 
-        session = await supabase_client.get_patient_session(session_id, str(tenant_id))
-        if session is None:
-            await websocket.close(code=4004)
-            return
+    try:
+        tenant_id: str | None = None
+        header_auth = websocket.headers.get("authorization", "")
+        if header_auth:
+            try:
+                tenant_id = tenant_from_bearer(header_auth)
+            except JWTError:
+                await websocket.close(code=4001)
+                return
+
+        session = None
+        pending_first_message: dict | None = None
+
+        if tenant_id:
+            session = await supabase_client.get_patient_session(session_id, tenant_id)
+            if session is None:
+                await websocket.close(code=4004)
+                return
 
         while True:
-            raw = await websocket.receive_text()
-            data = json.loads(raw)
+            if pending_first_message is not None:
+                data = pending_first_message
+                pending_first_message = None
+            else:
+                raw = await websocket.receive_text()
+                data = json.loads(raw)
+
+            if tenant_id is None:
+                auth_field = data.get("authorization", "")
+                if not auth_field:
+                    await websocket.close(code=4001)
+                    return
+                try:
+                    tenant_id = tenant_from_bearer(auth_field)
+                except JWTError:
+                    await websocket.close(code=4001)
+                    return
+                if not tenant_id:
+                    await websocket.close(code=4003)
+                    return
+                session = await supabase_client.get_patient_session(session_id, tenant_id)
+                if session is None:
+                    await websocket.close(code=4004)
+                    return
+
             message = data.get("message", "")
-            history = data.get("history") or session.get("message_history") or []
+            history = data.get("history") or (session.get("message_history") if session else []) or []
 
             if not await check_session_rate_limit(session_id):
                 await websocket.send_json({"error": "rate_limited"})
                 continue
 
-            async for token in run_triage_agent(session_id, str(tenant_id), message, history):
+            async for token in run_triage_agent(session_id, tenant_id, message, history):
                 if isinstance(token, str):
                     await websocket.send_json({"token": token})
                 elif isinstance(token, dict):

@@ -16,10 +16,13 @@ __pycache__/
 htmlcov/
 coverage.xml
 
-# Secrets — use .env.example as template only
+# Active env (gitignored); templates .env.development / .env.production are committed
 .env
 .env.local
 .env.*.local
+!.env.development
+!.env.production
+!.env.example
 
 # LangGraph runtime checkpoint
 checkpoints.db
@@ -28,3 +31,6 @@ checkpoints.db-*
 # Local SQLite / debug
 *.sqlite
 *.sqlite3
+
+# Supabase CLI local state
+.supabase/

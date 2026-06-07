@@ -5,8 +5,8 @@ import { useSelector } from "react-redux";
 
 import { IngestionStatusDot } from "@/components/clinic-docs/atoms/IngestionStatusDot";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useDocumentIngestion } from "@/hooks/useDocumentIngestion";
-import type { RootState } from "@/store";
+import { useDocumentIngestion } from "@/components/clinic-docs/hooks/useDocumentIngestion";
+import type { RootState } from "@/components/common/store";
 
 interface EmbeddingProgressPanelProps {
   jobId: string | null;

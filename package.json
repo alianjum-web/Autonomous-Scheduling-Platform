@@ -1,0 +1,36 @@
+{
+  "name": "autonomous-scheduling-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Monorepo root — orchestrates frontend + backend",
+  "scripts": {
+    "env:dev": "bash scripts/env/sync.sh development",
+    "env:prod": "bash scripts/env/sync.sh production",
+
+    "setup": "npm install --prefix frontend && npm install --prefix backend && npm run setup --prefix backend",
+
+    "dev": "npm run env:dev && npm run dev:backend:detached && npm run dev:frontend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:backend": "npm run docker:dev --prefix backend",
+    "dev:backend:detached": "npm run docker:dev:detached --prefix backend",
+    "dev:backend:local": "npm run dev --prefix backend",
+
+    "prod": "npm run env:prod && npm run prod:backend:detached && npm run prod:frontend",
+    "prod:frontend": "npm run prod --prefix frontend",
+    "prod:backend": "npm run docker:prod --prefix backend",
+    "prod:backend:detached": "npm run docker:prod:detached --prefix backend",
+
+    "stop": "npm run docker:stop --prefix backend",
+
+    "lint": "npm run lint --prefix frontend && npm run lint --prefix backend",
+    "test": "npm run test --prefix backend && npm run test --prefix frontend",
+    "test:frontend": "npm run test --prefix frontend",
+    "test:backend": "npm run test --prefix backend",
+    "db:validate": "npm run db:validate --prefix backend",
+    "db:link": "npm run db:link --prefix backend",
+    "db:push": "npm run db:push --prefix backend",
+    "db:migration:new": "npm run db:migration:new --prefix backend --",
+    "db:migration:list": "npm run db:migration:list --prefix backend",
+    "gen:types": "bash scripts/gen-supabase-types.sh"
+  }
+}

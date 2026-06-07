@@ -13,6 +13,7 @@ from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.logger import setup_logging
 from app.core.sentry import init_sentry
+from app.core.tracing import RequestTracingMiddleware
 from app.services.agent import warm_triage_graph
 from app.services.supabase_client import warm_supabase_pool
 
@@ -35,6 +36,7 @@ def create_app() -> FastAPI:
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     app.add_middleware(SlowAPIMiddleware)
+    app.add_middleware(RequestTracingMiddleware)
 
     app.add_middleware(
         CORSMiddleware,

@@ -1,0 +1,15 @@
+[project]
+name = "autonomous-scheduling-backend"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+pythonVersion = "3.12"
+include = ["app", "tests"]
+typeCheckingMode = "basic"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

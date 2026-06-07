@@ -145,12 +145,35 @@ Health check: `GET /health` (configured in `railway.toml` and Dockerfile).
 
 ## Database — Supabase
 
+Schema is versioned in `backend/supabase/migrations/`. The FastAPI backend owns the database; the frontend consumes generated types only.
+
+### Local
+
 ```bash
-supabase link --project-ref <your-ref>
-supabase db push
+npm install --prefix backend
+npm run db:link -- --project-ref <ref>   # once
+npm run db:validate
+npm run db:push
+npm run gen:types                        # refresh frontend/src/types/database.ts
 ```
 
-Apply all migrations (`001`–`007`) before first production deploy.
+### CI/CD (GitHub Actions)
+
+| Job | When | Action |
+|---|---|---|
+| `validate-database` | Every PR / push | Filename + layout checks (`scripts/db/validate-migrations.sh`) |
+| `deploy-database` | Push to `main` | `supabase db push` via `scripts/db/push.sh` |
+| `deploy-backend` / `deploy-frontend` | After migrations | Railway + Vercel deploy |
+
+Required GitHub secrets (production environment):
+
+| Secret | Purpose |
+|---|---|
+| `SUPABASE_ACCESS_TOKEN` | Supabase CLI auth ([Account → Access Tokens](https://supabase.com/dashboard/account/tokens)) |
+| `SUPABASE_PROJECT_REF` | Project ref from Supabase dashboard URL |
+| `SUPABASE_DB_PASSWORD` | Database password (if required by `supabase link`) |
+
+Migrations run **before** app deploys so API/frontend always target an up-to-date schema.
 
 **Pre-launch checklist:**
 

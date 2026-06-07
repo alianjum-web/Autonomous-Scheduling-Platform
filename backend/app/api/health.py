@@ -4,15 +4,14 @@ from fastapi import APIRouter
 
 from app.adapters.openai_client import get_openai_client_optional
 from app.adapters.redis_client import ping_redis
-from app.core.config import get_settings
+from app.schemas.health import HealthChecks, HealthResponse
 from app.services.supabase_client import ping_supabase
 
 router = APIRouter(tags=["health"])
 
 
-@router.get("/health")
-async def health_check():
-    settings = get_settings()
+@router.get("/health", response_model=HealthResponse)
+async def health_check() -> HealthResponse:
     db_ok = await ping_supabase()
     redis_ok = await ping_redis()
 
@@ -28,12 +27,22 @@ async def health_check():
             openai_ok = False
 
     status = "healthy" if db_ok and redis_ok else "degraded"
-    return {
-        "status": status,
-        "checks": {
-            "database": db_ok,
-            "redis": redis_ok,
-            "openai": openai_ok,
-            "openai_latency_ms": openai_latency_ms,
-        },
-    }
+    return HealthResponse(
+        status=status,
+        checks=HealthChecks(
+            database=db_ok,
+            redis=redis_ok,
+            openai=openai_ok,
+            openai_latency_ms=openai_latency_ms,
+        ),
+    )
+
+
+@router.get("/ready")
+async def readiness_check() -> dict:
+    """Kubernetes/Railway readiness probe — core dependencies only."""
+    db_ok = await ping_supabase()
+    redis_ok = await ping_redis()
+    if not db_ok or not redis_ok:
+        return {"status": "not_ready", "database": db_ok, "redis": redis_ok}
+    return {"status": "ready", "database": True, "redis": True}

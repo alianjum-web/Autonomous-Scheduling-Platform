@@ -1,0 +1,35 @@
+{
+  "name": "asp-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "FastAPI AI microservice — run from backend/ folder",
+  "scripts": {
+    "setup": "python3 -m venv .venv && .venv/bin/pip install -r requirements.txt",
+    "env:dev": "cp .env.development .env",
+    "env:prod": "cp .env.production .env",
+
+    "dev": "npm run env:dev && .venv/bin/uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
+    "prod": "npm run env:prod && .venv/bin/gunicorn -c gunicorn.conf.py app.main:app",
+
+    "docker:dev": "docker compose -f ../docker-compose.yml up --build",
+    "docker:dev:detached": "docker compose -f ../docker-compose.yml up --build -d redis api",
+    "docker:prod": "docker compose -f ../docker-compose.prod.yml up --build",
+    "docker:prod:detached": "docker compose -f ../docker-compose.prod.yml up --build -d redis api",
+    "docker:stop": "docker compose -f ../docker-compose.yml down && docker compose -f ../docker-compose.prod.yml down 2>/dev/null || true",
+
+    "test": ".venv/bin/pytest tests/ -q",
+    "test:verbose": ".venv/bin/pytest tests/ -v",
+    "test:cov": ".venv/bin/pytest tests/ -v --cov=app --cov-report=term-missing",
+    "lint": ".venv/bin/ruff check app tests",
+
+    "db:validate": "bash ../scripts/db/validate-migrations.sh",
+    "db:link": "bash ../scripts/db/link.sh",
+    "db:push": "bash ../scripts/db/push.sh",
+    "db:migration:new": "supabase migration new",
+    "db:migration:list": "supabase migration list",
+    "gen:types": "bash ../scripts/gen-supabase-types.sh"
+  },
+  "devDependencies": {
+    "supabase": "2.20.0"
+  }
+}

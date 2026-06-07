@@ -17,7 +17,7 @@ const csp = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  "img-src 'self' data: blob: https://images.unsplash.com",
   "font-src 'self' data:",
   `connect-src ${buildConnectSrc()}`,
   "frame-ancestors 'none'",
@@ -31,6 +31,7 @@ const nextConfig: NextConfig = {
   },
   images: {
     formats: ["image/avif", "image/webp"],
+    remotePatterns: [{ protocol: "https", hostname: "images.unsplash.com", pathname: "/**" }],
   },
   async headers() {
     return [

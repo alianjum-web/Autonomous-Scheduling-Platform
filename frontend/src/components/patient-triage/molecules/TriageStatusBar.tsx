@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import type { BookingStep } from "@/store/bookingSlice";
+import type { BookingStep } from "@/components/patient-triage/store/bookingSlice";
 
 const STEPS = [
   { key: "chat", label: "Chat" },

@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import type { AppointmentStatus } from "@/store/appointmentsSlice";
+import type { AppointmentStatus } from "@/components/appointments/store/appointmentsSlice";
 
 const VARIANT: Record<AppointmentStatus, "default" | "secondary" | "destructive" | "outline"> = {
   pending: "outline",

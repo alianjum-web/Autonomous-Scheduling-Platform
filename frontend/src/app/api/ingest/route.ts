@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import type { ApiErrorBody, IngestUploadResponse } from "@/types/api";
+import { isApiErrorBody } from "@/types/api";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 
@@ -46,6 +49,12 @@ export async function POST(request: NextRequest) {
     body: upstream,
   });
 
-  const body = await res.json().catch(() => ({ detail: res.statusText }));
-  return NextResponse.json(body, { status: res.status });
+  const body: unknown = await res.json().catch(() => ({ detail: res.statusText }));
+  if (res.ok) {
+    return NextResponse.json(body as IngestUploadResponse, { status: res.status });
+  }
+  const error: ApiErrorBody = isApiErrorBody(body)
+    ? body
+    : { detail: res.statusText };
+  return NextResponse.json(error, { status: res.status });
 }

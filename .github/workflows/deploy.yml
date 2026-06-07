@@ -16,11 +16,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: chmod +x scripts/compliance/*.sh
+      - run: chmod +x scripts/compliance/*.sh scripts/db/*.sh
       - run: ./scripts/compliance/scan-codebase-for-phi-logging.sh
 
+  validate-database:
+    name: Validate Database Migrations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: chmod +x scripts/db/*.sh
+      - run: bash scripts/db/validate-migrations.sh
+
   test-backend:
-    needs: [compliance-check]
+    needs: [compliance-check, validate-database]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -40,6 +48,7 @@ jobs:
 
       - run: pip install -r requirements.txt
 
+      - run: ruff check app tests
       - run: pytest tests/ -v --cov=app --cov-report=xml
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -57,7 +66,7 @@ jobs:
           fail_ci_if_error: false
 
   test-frontend:
-    needs: [compliance-check]
+    needs: [compliance-check, validate-database]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -78,12 +87,33 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run type-check
+      - run: npm run build
       - run: npm run test:unit
       - run: npx playwright install --with-deps
       - run: npm run test:e2e
 
-  deploy-backend:
+  deploy-database:
+    name: Deploy Database Migrations
     needs: [test-backend, test-frontend]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.20.0
+
+      - name: Apply pending migrations
+        run: bash scripts/db/push.sh
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+  deploy-backend:
+    needs: [deploy-database]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: production
@@ -98,7 +128,7 @@ jobs:
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
 
   deploy-frontend:
-    needs: [test-backend, test-frontend]
+    needs: [deploy-database]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: production

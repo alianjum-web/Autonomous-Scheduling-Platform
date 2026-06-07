@@ -8,7 +8,17 @@ All tables enforce **Row-Level Security**. No application-layer query can read d
 
 ## Current Schema (Sprint 1)
 
-Applied via `supabase/migrations/001_initial_schema.sql`.
+Migrations live in `backend/supabase/migrations/` using Supabase CLI timestamp filenames (`<14-digit-ts>_name.sql`). Applied from `backend/`:
+
+```bash
+npm run db:validate              # CI + local — filename/layout checks
+npm run db:push                  # apply to linked/CI project
+npm run gen:types                # regenerate frontend/src/types/database.ts
+```
+
+Create new migrations with `npm run db:migration:new -- feature_name` (never hand-roll timestamps for new files).
+
+Manual fallback: run SQL from `backend/supabase/migrations/` in the Supabase SQL editor.
 
 ### Extensions
 

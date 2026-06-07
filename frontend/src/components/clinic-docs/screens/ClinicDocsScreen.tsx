@@ -1,30 +1,38 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { FileSearch } from "lucide-react";
 
+import { useAdminGuard } from "@/components/common/hooks/useAdminGuard";
+import { useAuthSession } from "@/components/common/hooks/useAuthSession";
+import { AccessGate, LoadingScreen, PageHeader, PageShell } from "@/components/common/layout/PageShell";
+import type { RootState } from "@/components/common/store";
 import { DocumentCard } from "@/components/clinic-docs/molecules/DocumentCard";
 import { ChunkPreviewModal } from "@/components/clinic-docs/organisms/ChunkPreviewModal";
 import { DocumentUploader } from "@/components/clinic-docs/organisms/DocumentUploader";
 import { EmbeddingProgressPanel } from "@/components/clinic-docs/organisms/EmbeddingProgressPanel";
-import { useAdminGuard } from "@/hooks/useAdminGuard";
 import {
   useDeleteDocumentMutation,
   useGetDocumentsQuery,
-} from "@/store/api";
-import { removeDocument, setDocuments, setSelectedDoc } from "@/store/clinicDocsSlice";
-import type { RootState } from "@/store";
+} from "@/components/clinic-docs/store/clinicDocsApi";
+import {
+  removeDocument,
+  setActiveJobId,
+  setDocuments,
+  setPreviewOpen,
+  setSelectedDoc,
+} from "@/components/clinic-docs/store/clinicDocsSlice";
+import { IMAGES } from "@/lib/constants/images";
 
 export function ClinicDocsScreen() {
   const dispatch = useDispatch();
   const { loading: authLoading, isAdmin } = useAdminGuard();
+  const { session } = useAuthSession();
   const { data, isLoading, refetch } = useGetDocumentsQuery(undefined, { skip: !isAdmin });
   const [deleteDocument] = useDeleteDocumentMutation();
-  const [activeJobId, setActiveJobId] = useState<string | null>(null);
-  const [previewOpen, setPreviewOpen] = useState(false);
 
-  const documents = useSelector((state: RootState) => state.clinicDocs.documents);
-  const selectedDoc = useSelector((state: RootState) => state.clinicDocs.selectedDoc);
+  const { documents, selectedDoc, ui } = useSelector((state: RootState) => state.clinicDocs);
 
   useEffect(() => {
     if (data?.documents) {
@@ -32,47 +40,60 @@ export function ClinicDocsScreen() {
     }
   }, [data, dispatch]);
 
-  if (authLoading) {
-    return <p className="p-8 text-muted-foreground">Checking permissions…</p>;
+  if (authLoading) return <LoadingScreen message="Checking permissions…" />;
+
+  if (!session) {
+    return (
+      <AccessGate
+        title="Sign in to manage documents"
+        description="Clinic document ingestion and RAG embedding require an authenticated admin session."
+        icon={<FileSearch className="size-8" />}
+        requireAdmin
+      />
+    );
   }
 
   if (!isAdmin) {
     return (
-      <div className="mx-auto max-w-lg p-8 text-center">
-        <h2 className="text-lg font-semibold">Admin access required</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Only clinic administrators can manage document ingestion.
-        </p>
-      </div>
+      <AccessGate
+        title="Admin access required"
+        description="Only clinic administrators can upload and manage knowledge base documents."
+        icon={<FileSearch className="size-8" />}
+        requireAdmin
+      />
     );
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-8">
-      <header>
-        <h1 className="text-2xl font-semibold">Clinic Documents</h1>
-        <p className="text-sm text-muted-foreground">
-          Upload treatment protocols, pricing guides, insurance policies, and FAQs for RAG-powered
-          patient intake.
-        </p>
-      </header>
+    <PageShell maxWidth="4xl" className="gap-8">
+      <PageHeader
+        eyebrow="Knowledge base"
+        title="Clinic Documents"
+        description="Upload treatment protocols, pricing guides, insurance policies, and FAQs for RAG-powered patient intake."
+        image={IMAGES.docs}
+        imageAlt="Medical documentation and research"
+      />
 
       <section className="grid gap-6 md:grid-cols-2">
         <DocumentUploader
           onUploaded={(jobId) => {
-            setActiveJobId(jobId);
+            dispatch(setActiveJobId(jobId));
             refetch();
           }}
         />
-        <EmbeddingProgressPanel jobId={activeJobId} />
+        <EmbeddingProgressPanel jobId={ui.activeJobId} />
       </section>
 
-      <section>
-        <h2 className="mb-4 text-lg font-medium">Ingested Documents</h2>
+      <section className="hero-glow rounded-2xl border border-border/80 bg-card p-6">
+        <h2 className="mb-4 text-lg font-semibold">Ingested Documents</h2>
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading documents…</p>
+          <LoadingScreen message="Loading documents…" />
         ) : documents.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No documents ingested yet.</p>
+          <div className="rounded-xl border border-dashed border-border py-12 text-center">
+            <p className="text-sm text-muted-foreground">
+              No documents ingested yet. Upload your first clinic policy above.
+            </p>
+          </div>
         ) : (
           <div className="space-y-3">
             {documents.map((doc) => (
@@ -82,7 +103,7 @@ export function ClinicDocsScreen() {
                 selected={selectedDoc?.id === doc.id}
                 onSelect={() => {
                   dispatch(setSelectedDoc(doc));
-                  setPreviewOpen(true);
+                  dispatch(setPreviewOpen(true));
                 }}
                 onDelete={async () => {
                   await deleteDocument(doc.id);
@@ -96,9 +117,9 @@ export function ClinicDocsScreen() {
 
       <ChunkPreviewModal
         document={selectedDoc}
-        open={previewOpen}
-        onOpenChange={setPreviewOpen}
+        open={ui.previewOpen}
+        onOpenChange={(open) => dispatch(setPreviewOpen(open))}
       />
-    </div>
+    </PageShell>
   );
 }

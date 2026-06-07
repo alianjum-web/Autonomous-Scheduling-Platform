@@ -8,6 +8,7 @@ from typing import Any
 import pypdf
 from docx import Document as DocxDocument
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+
 from app.adapters.openai_client import get_openai_client
 from app.core.config import get_settings
 from app.core.logger import get_logger

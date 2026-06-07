@@ -1,11 +1,22 @@
 "use client";
 
+import { useDispatch, useSelector } from "react-redux";
+
+import type { RootState } from "@/components/common/store";
+import { useReduxForm } from "@/components/common/hooks/useReduxForm";
 import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { CalendarSelector } from "@/components/patient-triage/molecules/CalendarSelector";
-import { useBookingFlow } from "@/hooks/useBookingFlow";
-import { useSelector } from "react-redux";
-import type { RootState } from "@/store";
+import { useBookingFlow } from "@/components/patient-triage/hooks/useBookingFlow";
+import { setPatientInfo } from "@/components/patient-triage/store/bookingSlice";
 
 interface SlotBookingDrawerProps {
   open: boolean;
@@ -13,27 +24,32 @@ interface SlotBookingDrawerProps {
   sessionId: string | null;
 }
 
+interface BookingPatientForm {
+  patientName: string;
+  patientPhone: string;
+}
+
 export function SlotBookingDrawer({ open, onClose, sessionId }: SlotBookingDrawerProps) {
-  const { availableSlots, bookingStep } = useSelector((state: RootState) => state.booking);
-  const {
-    selectedSlot,
+  const dispatch = useDispatch();
+  const { availableSlots, bookingStep, patientName, patientPhone } = useSelector(
+    (state: RootState) => state.booking,
+  );
+  const { selectedSlot, reserving, chooseSlot, confirmBooking } = useBookingFlow(sessionId);
+
+  const form = useReduxForm<BookingPatientForm>({
     patientName,
     patientPhone,
-    reserving,
-    chooseSlot,
-    confirmBooking,
-    updatePatientInfo,
-  } = useBookingFlow(sessionId);
+  });
 
   if (!open) return null;
 
-  const handleConfirm = async () => {
+  const onSubmit = form.handleSubmit(async () => {
     try {
       await confirmBooking();
     } catch {
       /* toast shown in useBookingFlow */
     }
-  };
+  });
 
   return (
     <aside className="fixed inset-y-0 right-0 z-40 w-full max-w-md border-l bg-background p-6 shadow-xl">
@@ -54,21 +70,58 @@ export function SlotBookingDrawer({ open, onClose, sessionId }: SlotBookingDrawe
           />
 
           {bookingStep === "confirm" && selectedSlot ? (
-            <div className="mt-6 space-y-3">
-              <Input
-                placeholder="Your full name"
-                value={patientName}
-                onChange={(e) => updatePatientInfo(e.target.value, patientPhone)}
-              />
-              <Input
-                placeholder="Phone number (optional)"
-                value={patientPhone}
-                onChange={(e) => updatePatientInfo(patientName, e.target.value)}
-              />
-              <Button className="w-full" onClick={handleConfirm} disabled={reserving || !patientName}>
-                {reserving ? "Reserving…" : "Confirm Booking"}
-              </Button>
-            </div>
+            <Form {...form}>
+              <form onSubmit={onSubmit} className="mt-6 space-y-3">
+                <FormField
+                  control={form.control}
+                  name="patientName"
+                  rules={{ required: "Full name is required to confirm your booking." }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel required>Full name</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Jane Doe"
+                          {...field}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            dispatch(
+                              setPatientInfo({ name: e.target.value, phone: patientPhone }),
+                            );
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="patientPhone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone number</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Optional — E.164 format"
+                          {...field}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            dispatch(
+                              setPatientInfo({ name: patientName, phone: e.target.value }),
+                            );
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button className="w-full" type="submit" disabled={reserving || !patientName.trim()}>
+                  {reserving ? "Reserving…" : "Confirm Booking"}
+                </Button>
+              </form>
+            </Form>
           ) : null}
         </>
       ) : null}

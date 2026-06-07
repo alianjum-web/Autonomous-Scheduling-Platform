@@ -2,8 +2,8 @@
 
 import { Modal } from "@/components/common/Modal";
 import { ChunkPreviewRow } from "@/components/clinic-docs/molecules/ChunkPreviewRow";
-import { useGetDocumentChunksQuery } from "@/store/api";
-import type { ClinicDocument } from "@/store/clinicDocsSlice";
+import { useGetDocumentChunksQuery } from "@/components/clinic-docs/store/clinicDocsApi";
+import type { ClinicDocument } from "@/components/clinic-docs/store/clinicDocsSlice";
 
 interface ChunkPreviewModalProps {
   document: ClinicDocument | null;

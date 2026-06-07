@@ -23,10 +23,18 @@ Desktop.ini
 # Cursor (keep rules/skills if you add them; ignore local state)
 .cursor/
 
-# ── Secrets & environment (never commit) ────────────────────────────────────
+# ── Secrets & environment ───────────────────────────────────────────────────
+# Active/local overrides (never commit secrets here)
 .env
-.env.*
+.env.local
+.env.*.local
+
+# Committed templates (placeholders only — put secrets in .env.local / .env)
+!.env.development
+!.env.production
 !.env.example
+!**/.env.development
+!**/.env.production
 !**/.env.example
 
 # Keys & certificates
@@ -118,10 +126,9 @@ yarn-error.log*
 docker-compose.override.yml
 docker-compose.*.local.yml
 
-# ── Supabase local CLI ────────────────────────────────────────────────────────
-.supabase/
-supabase/.branches/
-supabase/.temp/
+# ── Supabase local CLI (schema lives in backend/supabase/) ────────────────────
+/supabase/                     # ignore accidental root-level supabase/ dir
+backend/.supabase/             # CLI link state when run from backend/
 
 # ── Observability / debug dumps ───────────────────────────────────────────────
 *.dump

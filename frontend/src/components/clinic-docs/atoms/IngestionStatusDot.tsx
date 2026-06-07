@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import type { IngestionJobStatus } from "@/store/clinicDocsSlice";
+import type { IngestionJobStatus } from "@/components/clinic-docs/store/clinicDocsSlice";
 
 const STATUS_COLORS: Record<IngestionJobStatus, string> = {
   pending: "bg-muted-foreground",

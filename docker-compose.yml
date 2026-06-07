@@ -12,8 +12,10 @@ services:
     ports:
       - "8000:8000"
     env_file:
-      - ./backend/.env
+      - ./backend/.env.development
     environment:
+      ENVIRONMENT: development
+      DEBUG: "true"
       REDIS_URL: redis://redis:6379/0
     depends_on:
       - redis

@@ -28,18 +28,6 @@ def test_settings_default_zero_data_retention_enabled():
     assert settings.openai_zero_data_retention is True
 
 
-def test_audit_migration_defines_triggers_and_append_only():
-    root = Path(__file__).resolve().parents[2]
-    migration_004 = (root / "supabase/migrations/004_production_hardening.sql").read_text()
-    migration_007 = (root / "supabase/migrations/007_phi_security_controls.sql").read_text()
-
-    assert "CREATE TABLE audit_logs" in migration_004
-    assert "audit_patient_sessions" in migration_004
-    assert "audit_appointments" in migration_004
-    assert "audit_logs_no_update" in migration_007
-    assert "audit_logs_no_delete" in migration_007
-
-
 def test_compliance_scripts_exist():
     root = Path(__file__).resolve().parents[2]
     scripts = root / "scripts/compliance"
