@@ -16,12 +16,12 @@ __pycache__/
 htmlcov/
 coverage.xml
 
-# Active env (gitignored); templates .env.development / .env.production are committed
+# Active env (gitignored); .env.example / .env.development are committed templates
 .env
 .env.local
+.env.production
 .env.*.local
 !.env.development
-!.env.production
 !.env.example
 
 # LangGraph runtime checkpoint

@@ -24,17 +24,16 @@ Desktop.ini
 .cursor/
 
 # ── Secrets & environment ───────────────────────────────────────────────────
-# Active/local overrides (never commit secrets here)
+# Never commit secrets — use .env.local (local) or platform dashboards (prod)
 .env
 .env.local
+.env.production
 .env.*.local
 
-# Committed templates (placeholders only — put secrets in .env.local / .env)
+# Committed templates (placeholders only)
 !.env.development
-!.env.production
 !.env.example
 !**/.env.development
-!**/.env.production
 !**/.env.example
 
 # Keys & certificates

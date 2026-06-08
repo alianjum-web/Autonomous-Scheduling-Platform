@@ -2,9 +2,10 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
+from jose import JWTError
 
 from app.core.config import Settings, get_settings
+from app.core.jwt_verify import decode_supabase_jwt
 
 security_scheme = HTTPBearer(auto_error=False)
 
@@ -12,12 +13,7 @@ ADMIN_ROLES = frozenset({"admin", "clinic_admin"})
 
 
 def decode_jwt_token(token: str, settings: Settings) -> dict:
-    return jwt.decode(
-        token,
-        settings.supabase_jwt_secret,
-        algorithms=["HS256"],
-        options={"verify_aud": False},
-    )
+    return decode_supabase_jwt(token, settings)
 
 
 def _extract_payload(
