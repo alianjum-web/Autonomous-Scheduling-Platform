@@ -1,13 +1,17 @@
 "use client";
 
 import { useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
 import { FileSearch } from "lucide-react";
 
 import { useAdminGuard } from "@/components/common/hooks/useAdminGuard";
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
 import { AccessGate, LoadingScreen, PageHeader, PageShell } from "@/components/common/layout/PageShell";
-import type { RootState } from "@/components/common/store";
+import { useAppDispatch, useAppSelector } from "@/components/common/store/hooks";
+import {
+  selectClinicDocsUi,
+  selectDocuments,
+  selectSelectedDoc,
+} from "@/components/clinic-docs/store/clinicDocsSelectors";
 import { DocumentCard } from "@/components/clinic-docs/molecules/DocumentCard";
 import { ChunkPreviewModal } from "@/components/clinic-docs/organisms/ChunkPreviewModal";
 import { DocumentUploader } from "@/components/clinic-docs/organisms/DocumentUploader";
@@ -26,13 +30,15 @@ import {
 import { IMAGES } from "@/lib/constants/images";
 
 export function ClinicDocsScreen() {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const { loading: authLoading, isAdmin } = useAdminGuard();
   const { session } = useAuthSession();
   const { data, isLoading, refetch } = useGetDocumentsQuery(undefined, { skip: !isAdmin });
   const [deleteDocument] = useDeleteDocumentMutation();
 
-  const { documents, selectedDoc, ui } = useSelector((state: RootState) => state.clinicDocs);
+  const documents = useAppSelector(selectDocuments);
+  const selectedDoc = useAppSelector(selectSelectedDoc);
+  const ui = useAppSelector(selectClinicDocsUi);
 
   useEffect(() => {
     if (data?.documents) {

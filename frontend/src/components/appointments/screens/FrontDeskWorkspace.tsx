@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
 import { LayoutDashboard } from "lucide-react";
 
 import { DailyCalendarGrid } from "@/components/appointments/organisms/DailyCalendarGrid";
@@ -9,7 +8,12 @@ import { Button } from "@/components/ui/button";
 import { useAdminGuard } from "@/components/common/hooks/useAdminGuard";
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
 import { AccessGate, LoadingScreen, PageHeader, PageShell } from "@/components/common/layout/PageShell";
-import type { RootState } from "@/components/common/store";
+import { useAppDispatch, useAppSelector } from "@/components/common/store/hooks";
+import {
+  selectAppointments,
+  selectEscalations,
+  selectSelectedDate,
+} from "@/components/appointments/store/appointmentsSelectors";
 import { useAppointmentSync } from "@/components/appointments/hooks/useAppointmentSync";
 import { useEscalationWatch } from "@/components/appointments/hooks/useEscalationWatch";
 import { useGetAppointmentsQuery } from "@/components/appointments/store/appointmentsApi";
@@ -18,7 +22,7 @@ import { useEscalateSessionMutation } from "@/components/patient-triage/store/tr
 import { IMAGES } from "@/lib/constants/images";
 
 export function FrontDeskWorkspace() {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const { isAdmin, loading: authLoading } = useAdminGuard();
   const { tenantId, session } = useAuthSession();
   const [escalate] = useEscalateSessionMutation();
@@ -26,9 +30,9 @@ export function FrontDeskWorkspace() {
   useEscalationWatch(tenantId);
   useAppointmentSync(tenantId);
 
-  const { escalations, appointments, selectedDate } = useSelector(
-    (state: RootState) => state.appointments,
-  );
+  const escalations = useAppSelector(selectEscalations);
+  const appointments = useAppSelector(selectAppointments);
+  const selectedDate = useAppSelector(selectSelectedDate);
 
   const { data } = useGetAppointmentsQuery(selectedDate, { skip: !isAdmin });
 

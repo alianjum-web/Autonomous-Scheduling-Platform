@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
 import { CalendarDays, Clock, Users, Zap } from "lucide-react";
 
 import { AppointmentCard } from "@/components/appointments/molecules/AppointmentCard";
@@ -9,6 +8,13 @@ import { AppointmentDetailPanel } from "@/components/appointments/organisms/Appo
 import { DailyCalendarGrid } from "@/components/appointments/organisms/DailyCalendarGrid";
 import { useAppointmentSync } from "@/components/appointments/hooks/useAppointmentSync";
 import { useGetAppointmentsQuery } from "@/components/appointments/store/appointmentsApi";
+import {
+  selectAppointments,
+  selectSelectedAppointment,
+  selectSelectedAppointmentId,
+  selectSelectedDate,
+  selectViewMode,
+} from "@/components/appointments/store/appointmentsSelectors";
 import {
   setAppointments,
   setSelectedAppointment,
@@ -21,7 +27,7 @@ import { useAdminGuard } from "@/components/common/hooks/useAdminGuard";
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
 import { AccessGate, LoadingScreen, PageHeader, PageShell } from "@/components/common/layout/PageShell";
 import { useReduxForm } from "@/components/common/hooks/useReduxForm";
-import type { RootState } from "@/components/common/store";
+import { useAppDispatch, useAppSelector } from "@/components/common/store/hooks";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -32,14 +38,16 @@ interface DateFilterForm {
 }
 
 export function AppointmentsDashboard() {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const { isAdmin, loading: authLoading } = useAdminGuard();
   const { tenantId, session } = useAuthSession();
   useAppointmentSync(tenantId);
 
-  const { selectedDate, viewMode, appointments, selectedAppointmentId } = useSelector(
-    (state: RootState) => state.appointments,
-  );
+  const selectedDate = useAppSelector(selectSelectedDate);
+  const viewMode = useAppSelector(selectViewMode);
+  const appointments = useAppSelector(selectAppointments);
+  const selectedAppointmentId = useAppSelector(selectSelectedAppointmentId);
+  const selected = useAppSelector(selectSelectedAppointment);
 
   const form = useReduxForm<DateFilterForm>({ selectedDate });
 
@@ -48,8 +56,6 @@ export function AppointmentsDashboard() {
   useEffect(() => {
     if (data?.appointments) dispatch(setAppointments(data.appointments));
   }, [data, dispatch]);
-
-  const selected = appointments.find((a) => a.id === selectedAppointmentId) ?? null;
 
   if (authLoading) return <LoadingScreen message="Checking permissions…" />;
   if (!session) {

@@ -11,6 +11,8 @@ from langgraph.graph import END, StateGraph
 from openai.types.chat import ChatCompletionMessageParam
 from typing_extensions import NotRequired, TypedDict
 
+from app.schemas.db import ChatMessage
+
 from app.adapters.calendar_gateway import get_available_slots
 from app.adapters.openai_client import get_openai_client_optional, phi_safe_chat_kwargs
 from app.core.config import get_settings
@@ -359,7 +361,7 @@ async def run_triage_agent(
     session_id: str,
     tenant_id: str,
     message: str,
-    history: list[dict] | None = None,
+    history: list[ChatMessage] | None = None,
 ) -> AsyncIterator[str | dict[str, Any]]:
     graph = await get_triage_graph()
     queue = _get_stream_queue(session_id)
@@ -393,7 +395,7 @@ async def run_triage_agent(
         session_id=session_id,
         tenant_id=tenant_id,
         thread_id=session_id,
-        message_history=initial_state["messages"],
+        message_history=cast(list[dict], initial_state["messages"]),
     )
 
     graph_task = asyncio.create_task(graph.ainvoke(initial_state, config=config))
@@ -407,7 +409,7 @@ async def run_triage_agent(
     result = await graph_task
 
     assistant_reply = result.get("final_response", "")
-    updated_messages = (history or []) + [
+    updated_messages: list[ChatMessage] = (history or []) + [
         {"role": "user", "content": message},
         {"role": "assistant", "content": assistant_reply},
     ]
@@ -423,7 +425,7 @@ async def run_triage_agent(
         session_id=session_id,
         tenant_id=tenant_id,
         triage_status=triage_status,
-        message_history=updated_messages,
+        message_history=cast(list[dict], updated_messages),
         available_slots=result.get("available_slots", []),
     )
 

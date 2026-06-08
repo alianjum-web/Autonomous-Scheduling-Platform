@@ -1,29 +1,49 @@
 "use client";
 
-import { useCallback } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useCallback, useEffect } from "react";
 
-import type { RootState } from "@/components/common/store";
 import { showToast } from "@/components/ui/toast";
 import {
   useBookAppointmentMutation,
   useGetAvailableSlotsQuery,
 } from "@/components/patient-triage/store/bookingApi";
 import {
+  selectAvailableSlots,
+  selectBookingReserving,
+  selectBookingStep,
+  selectConfirmationCode,
+  selectPatientName,
+  selectPatientPhone,
+  selectSelectedSlot,
+} from "@/components/patient-triage/store/bookingSelectors";
+import {
   selectSlot,
+  setAvailableSlots,
   setBookingConfirmed,
   setSlotStatus,
 } from "@/components/patient-triage/store/bookingSlice";
+import { useAppDispatch, useAppSelector } from "@/components/common/store/hooks";
 
 export function useBookingFlow(sessionId: string | null) {
-  const dispatch = useDispatch();
-  const { selectedSlot, bookingStep, patientName, patientPhone, confirmationCode, reserving } =
-    useSelector((state: RootState) => state.booking);
+  const dispatch = useAppDispatch();
+  const availableSlots = useAppSelector(selectAvailableSlots);
+  const selectedSlot = useAppSelector(selectSelectedSlot);
+  const bookingStep = useAppSelector(selectBookingStep);
+  const confirmationCode = useAppSelector(selectConfirmationCode);
+  const patientName = useAppSelector(selectPatientName);
+  const patientPhone = useAppSelector(selectPatientPhone);
+  const reserving = useAppSelector(selectBookingReserving);
 
   const { data: slotsData, isLoading: slotsLoading } = useGetAvailableSlotsQuery(undefined, {
-    skip: bookingStep === "idle",
+    skip: bookingStep === "idle" || availableSlots.length > 0,
   });
   const [bookAppointment] = useBookAppointmentMutation();
+
+  useEffect(() => {
+    if (slotsData?.slots?.length) {
+      dispatch(setAvailableSlots(slotsData.slots));
+    }
+  }, [dispatch, slotsData]);
 
   const chooseSlot = useCallback(
     (iso: string) => {
@@ -63,7 +83,7 @@ export function useBookingFlow(sessionId: string | null) {
   }, [bookAppointment, dispatch, patientName, patientPhone, selectedSlot, sessionId]);
 
   return {
-    slots: slotsData?.slots ?? [],
+    availableSlots,
     slotsLoading,
     selectedSlot,
     bookingStep,

@@ -1,15 +1,18 @@
 "use client";
 
 import { useCallback, useRef } from "react";
-import { useDispatch, useSelector } from "react-redux";
 import { EventSourcePolyfill } from "event-source-polyfill";
 
 import { addEscalation } from "@/components/appointments/store/appointmentsSlice";
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
-import type { RootState } from "@/components/common/store";
+import { useAppDispatch, useAppSelector } from "@/components/common/store/hooks";
 import { showToast } from "@/components/ui/toast";
 import { setAvailableSlots } from "@/components/patient-triage/store/bookingSlice";
 import { useCreateTriageSessionMutation } from "@/components/patient-triage/store/triageApi";
+import {
+  selectTriageMessages,
+  selectTriageSessionId,
+} from "@/components/patient-triage/store/triageSelectors";
 import {
   appendToken,
   finishAssistantMessage,
@@ -42,11 +45,11 @@ async function* readSseStream(response: Response): AsyncGenerator<string> {
 }
 
 export function useStreamingChat() {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const { accessToken, refreshSession } = useAuthSession();
   const [createSession] = useCreateTriageSessionMutation();
-  const sessionId = useSelector((state: RootState) => state.triage.sessionId);
-  const messages = useSelector((state: RootState) => state.triage.messages);
+  const sessionId = useAppSelector(selectTriageSessionId);
+  const messages = useAppSelector(selectTriageMessages);
   const eventSourceRef = useRef<EventSourcePolyfill | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const abortRef = useRef<AbortController | null>(null);

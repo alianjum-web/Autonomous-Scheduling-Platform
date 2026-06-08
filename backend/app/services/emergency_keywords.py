@@ -47,7 +47,7 @@ DEFAULT_PATTERNS: list[str] = [
     r"\bER\b",
 ]
 
-_active_patterns: list[str] = list(DEFAULT_PATTERNS)
+_active_patterns: list[str] = list[str](DEFAULT_PATTERNS)
 _compiled_regex: Pattern[str] | None = None
 
 

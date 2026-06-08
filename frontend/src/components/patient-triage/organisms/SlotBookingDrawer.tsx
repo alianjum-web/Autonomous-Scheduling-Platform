@@ -1,9 +1,7 @@
 "use client";
 
-import { useDispatch, useSelector } from "react-redux";
-
-import type { RootState } from "@/components/common/store";
 import { useReduxForm } from "@/components/common/hooks/useReduxForm";
+import { useAppDispatch, useAppSelector } from "@/components/common/store/hooks";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -16,6 +14,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { CalendarSelector } from "@/components/patient-triage/molecules/CalendarSelector";
 import { useBookingFlow } from "@/components/patient-triage/hooks/useBookingFlow";
+import {
+  selectAvailableSlots,
+  selectBookingStep,
+  selectPatientName,
+  selectPatientPhone,
+} from "@/components/patient-triage/store/bookingSelectors";
 import { setPatientInfo } from "@/components/patient-triage/store/bookingSlice";
 
 interface SlotBookingDrawerProps {
@@ -30,10 +34,11 @@ interface BookingPatientForm {
 }
 
 export function SlotBookingDrawer({ open, onClose, sessionId }: SlotBookingDrawerProps) {
-  const dispatch = useDispatch();
-  const { availableSlots, bookingStep, patientName, patientPhone } = useSelector(
-    (state: RootState) => state.booking,
-  );
+  const dispatch = useAppDispatch();
+  const availableSlots = useAppSelector(selectAvailableSlots);
+  const bookingStep = useAppSelector(selectBookingStep);
+  const patientName = useAppSelector(selectPatientName);
+  const patientPhone = useAppSelector(selectPatientPhone);
   const { selectedSlot, reserving, chooseSlot, confirmBooking } = useBookingFlow(sessionId);
 
   const form = useReduxForm<BookingPatientForm>({

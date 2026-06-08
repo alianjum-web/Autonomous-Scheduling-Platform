@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
-import { useSelector } from "react-redux";
-
 import { IngestionStatusDot } from "@/components/clinic-docs/atoms/IngestionStatusDot";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDocumentIngestion } from "@/components/clinic-docs/hooks/useDocumentIngestion";
-import type { RootState } from "@/components/common/store";
+import { selectUploadProgress } from "@/components/clinic-docs/store/clinicDocsSelectors";
+import { useAppSelector } from "@/components/common/store/hooks";
 
 interface EmbeddingProgressPanelProps {
   jobId: string | null;
@@ -14,7 +13,7 @@ interface EmbeddingProgressPanelProps {
 
 export function EmbeddingProgressPanel({ jobId }: EmbeddingProgressPanelProps) {
   const { subscribeToJob } = useDocumentIngestion();
-  const uploadProgress = useSelector((state: RootState) => state.clinicDocs.uploadProgress);
+  const uploadProgress = useAppSelector(selectUploadProgress);
 
   useEffect(() => {
     if (!jobId) return;

@@ -7,7 +7,7 @@ from app.services.supabase_client import AppointmentConflictError
 
 @pytest.mark.asyncio
 async def test_booking_returns_409_when_lock_held(client, make_token, tenant_id):
-    with patch("app.api.v1.endpoints.schedule.acquire_lock", AsyncMock(return_value=False)):
+    with patch("app.services.scheduling_service.acquire_lock", AsyncMock(return_value=False)):
         token = make_token()
         response = client.post(
             "/v1/schedule/book",
@@ -25,22 +25,22 @@ async def test_booking_returns_409_when_lock_held(client, make_token, tenant_id)
 @pytest.mark.asyncio
 async def test_booking_returns_409_on_db_unique_violation(client, make_token, tenant_id):
     with (
-        patch("app.api.v1.endpoints.schedule.acquire_lock", AsyncMock(return_value=True)),
-        patch("app.api.v1.endpoints.schedule.release_lock", AsyncMock()),
+        patch("app.services.scheduling_service.acquire_lock", AsyncMock(return_value=True)),
+        patch("app.services.scheduling_service.release_lock", AsyncMock()),
         patch(
-            "app.api.v1.endpoints.schedule.supabase_client.find_conflicting_appointment",
+            "app.services.scheduling_service.supabase_client.find_conflicting_appointment",
             AsyncMock(return_value=None),
         ),
         patch(
-            "app.api.v1.endpoints.schedule.create_calendar_event",
+            "app.services.scheduling_service.create_calendar_event",
             AsyncMock(return_value="cal-event-1"),
         ),
         patch(
-            "app.api.v1.endpoints.schedule.delete_calendar_event",
+            "app.services.scheduling_service.delete_calendar_event",
             AsyncMock(),
         ) as mock_delete,
         patch(
-            "app.api.v1.endpoints.schedule.supabase_client.create_appointment",
+            "app.services.scheduling_service.supabase_client.create_appointment",
             AsyncMock(side_effect=AppointmentConflictError()),
         ),
     ):

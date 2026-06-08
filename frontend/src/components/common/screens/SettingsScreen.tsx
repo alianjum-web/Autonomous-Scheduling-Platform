@@ -2,39 +2,31 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 import { Bell, Building2, Shield, User } from "lucide-react";
 
 import { useAdminGuard } from "@/components/common/hooks/useAdminGuard";
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
 import { AccessGate, LoadingScreen, PageHeader, PageShell } from "@/components/common/layout/PageShell";
+import { resetFeatureState } from "@/components/common/store/resetFeatureState";
+import { useGetUserProfileQuery } from "@/components/common/store/settingsApi";
+import { useAppDispatch } from "@/components/common/store/hooks";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { fetchUserProfile } from "@/lib/supabase/onboarding";
 import { createClient } from "@/lib/supabase/client";
 
 export function SettingsScreen() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const { session, loading: authLoading } = useAuthSession();
   const { isAdmin, clinicRole } = useAdminGuard();
-  const [profileLoading, setProfileLoading] = useState(true);
-  const [clinicName, setClinicName] = useState<string | null>(null);
-  const [workspaceSlug, setWorkspaceSlug] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!session) return;
-    fetchUserProfile()
-      .then((data) => {
-        const tenant = data?.profile?.tenants as { name?: string; slug?: string } | null;
-        setClinicName(tenant?.name ?? null);
-        setWorkspaceSlug(tenant?.slug ?? null);
-      })
-      .finally(() => setProfileLoading(false));
-  }, [session]);
+  const { data: profile, isLoading: profileLoading } = useGetUserProfileQuery(undefined, {
+    skip: !session,
+  });
 
   const handleSignOut = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
+    resetFeatureState(dispatch);
     router.push("/");
     router.refresh();
   };
@@ -71,17 +63,18 @@ export function SettingsScreen() {
           <CardContent className="space-y-3 text-sm">
             <div className="flex justify-between gap-4 border-b border-border/60 pb-3">
               <span className="text-muted-foreground">Email</span>
-              <span className="font-medium">{session.user.email}</span>
+              <span className="font-medium">{profile?.email ?? session.user.email}</span>
             </div>
             <div className="flex justify-between gap-4 border-b border-border/60 pb-3">
               <span className="text-muted-foreground">Name</span>
               <span className="font-medium">
-                {(session.user.user_metadata?.full_name as string) || "—"}
+                {profile?.fullName ??
+                  ((session.user.user_metadata?.full_name as string) || "—")}
               </span>
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">Role</span>
-              <span className="font-medium capitalize">{clinicRole ?? "patient"}</span>
+              <span className="font-medium capitalize">{clinicRole ?? profile?.role ?? "patient"}</span>
             </div>
           </CardContent>
         </Card>
@@ -97,11 +90,11 @@ export function SettingsScreen() {
           <CardContent className="space-y-3 text-sm">
             <div className="flex justify-between gap-4 border-b border-border/60 pb-3">
               <span className="text-muted-foreground">Clinic</span>
-              <span className="font-medium">{clinicName ?? "Not configured"}</span>
+              <span className="font-medium">{profile?.clinicName ?? "Not configured"}</span>
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">Slug</span>
-              <span className="font-mono text-xs">{workspaceSlug ?? "—"}</span>
+              <span className="font-mono text-xs">{profile?.workspaceSlug ?? "—"}</span>
             </div>
           </CardContent>
         </Card>

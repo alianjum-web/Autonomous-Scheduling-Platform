@@ -12,4 +12,4 @@ ESCALATIONS = Counter("escalations_total", "Patient escalations")
 
 @router.get("/metrics")
 async def metrics():
-    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+    return Response(content=generate_latest(), media_type=str(CONTENT_TYPE_LATEST))

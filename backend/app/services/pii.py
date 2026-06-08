@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from typing import cast
 
 from app.core.logger import get_logger
 
@@ -24,14 +25,17 @@ def redact_pii(text: str) -> str:
         from presidio_analyzer import AnalyzerEngine
         from presidio_anonymizer import AnonymizerEngine
         from presidio_anonymizer.entities import OperatorConfig
+        from presidio_anonymizer.entities.engine.recognizer_result import RecognizerResult
 
         analyzer = AnalyzerEngine()
         anonymizer = AnonymizerEngine()
-        results = analyzer.analyze(text=text, language="en", entities=["US_SSN", "DATE_TIME", "PERSON"])
+        results = analyzer.analyze(
+            text=redacted, language="en", entities=["US_SSN", "DATE_TIME", "PERSON"]
+        )
         if results:
             redacted = anonymizer.anonymize(
                 text=redacted,
-                analyzer_results=results,
+                analyzer_results=cast(list[RecognizerResult], results),
                 operators={"DEFAULT": OperatorConfig("replace", {"new_value": "[REDACTED]"})},
             ).text
     except ImportError:

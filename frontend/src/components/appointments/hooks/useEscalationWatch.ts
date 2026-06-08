@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useDispatch } from "react-redux";
+import { useAppDispatch } from "@/components/common/store/hooks";
 
 import {
   addEscalation,
@@ -11,7 +11,7 @@ import { showToast } from "@/components/ui/toast";
 import { createClient } from "@/lib/supabase/client";
 
 export function useEscalationWatch(tenantId: string | null) {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
   useEffect(() => {
     if (!tenantId) return;

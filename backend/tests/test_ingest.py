@@ -43,7 +43,7 @@ async def test_duplicate_returns_409(client, make_token, tenant_id):
     existing = {"id": "doc-1", "source_filename": "policy.pdf"}
 
     with patch(
-        "app.api.v1.endpoints.ingest.supabase_client.find_document_by_hash",
+        "app.services.ingestion_service.supabase_client.find_document_by_hash",
         AsyncMock(return_value=existing),
     ):
         response = client.post(

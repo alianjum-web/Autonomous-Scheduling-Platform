@@ -5,16 +5,20 @@ import clinicDocsReducer from "@/components/clinic-docs/store/clinicDocsSlice";
 import bookingReducer from "@/components/patient-triage/store/bookingSlice";
 import triageReducer from "@/components/patient-triage/store/triageSlice";
 
+import authReducer from "./authSlice";
 import { baseApi } from "./baseApi";
 
 import "@/components/appointments/store/appointmentsApi";
 import "@/components/clinic-docs/store/clinicDocsApi";
 import "@/components/patient-triage/store/bookingApi";
 import "@/components/patient-triage/store/triageApi";
+import "./healthApi";
+import "./settingsApi";
 
 export const makeStore = () =>
   configureStore({
     reducer: {
+      auth: authReducer,
       triage: triageReducer,
       booking: bookingReducer,
       appointments: appointmentsReducer,

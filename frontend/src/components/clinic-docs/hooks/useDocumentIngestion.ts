@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef } from "react";
-import { useDispatch } from "react-redux";
+import { useAppDispatch } from "@/components/common/store/hooks";
 
 import { useUploadDocumentMutation } from "@/components/clinic-docs/store/clinicDocsApi";
 import {
@@ -21,7 +21,7 @@ const ALLOWED_TYPES = [
 ];
 
 export function useDocumentIngestion() {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const [uploadDocument, { isLoading }] = useUploadDocumentMutation();
   const pendingFileRef = useRef<File | null>(null);
 

@@ -70,6 +70,9 @@ const appointmentsSlice = createSlice({
     setSelectedAppointment(state, action: PayloadAction<string | null>) {
       state.selectedAppointmentId = action.payload;
     },
+    resetAppointments() {
+      return initialState;
+    },
   },
 });
 
@@ -83,6 +86,7 @@ export const {
   setViewMode,
   setFilters,
   setSelectedAppointment,
+  resetAppointments,
 } = appointmentsSlice.actions;
 
 export default appointmentsSlice.reducer;

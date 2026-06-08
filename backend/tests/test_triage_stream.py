@@ -19,9 +19,8 @@ async def test_sse_streams_tokens(client, make_token, tenant_id):
         return None
 
     with (
-        patch("app.api.v1.endpoints.triage.supabase_client.get_patient_session", mock_get_session),
-        patch("app.api.v1.endpoints.triage.run_triage_agent", _mock_agent_stream),
-        patch("app.api.v1.endpoints.triage.check_session_rate_limit", AsyncMock(return_value=True)),
+        patch("app.services.triage_service.get_session", mock_get_session),
+        patch("app.services.triage_service.run_triage_agent", _mock_agent_stream),
     ):
         token = make_token()
         response = client.get(

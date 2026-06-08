@@ -1,11 +1,10 @@
 "use client";
 
 import { useCallback, useRef } from "react";
-import { useDispatch, useSelector } from "react-redux";
 import { Upload } from "lucide-react";
 
-import type { RootState } from "@/components/common/store";
 import { useReduxForm } from "@/components/common/hooks/useReduxForm";
+import { useAppDispatch, useAppSelector } from "@/components/common/store/hooks";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -16,6 +15,7 @@ import {
 } from "@/components/ui/form";
 import { FileUploadChip } from "@/components/clinic-docs/atoms/FileUploadChip";
 import { useDocumentIngestion } from "@/components/clinic-docs/hooks/useDocumentIngestion";
+import { selectUploadForm } from "@/components/clinic-docs/store/clinicDocsSelectors";
 import {
   setUploadCategory,
   setUploadDragOver,
@@ -46,9 +46,9 @@ interface DocumentUploaderProps {
 }
 
 export function DocumentUploader({ onUploaded }: DocumentUploaderProps) {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const inputRef = useRef<HTMLInputElement>(null);
-  const { uploadForm } = useSelector((state: RootState) => state.clinicDocs);
+  const uploadForm = useAppSelector(selectUploadForm);
   const { ingest, stageFile, clearStagedFile, isUploading } = useDocumentIngestion();
 
   const form = useReduxForm<UploadFormValues>({ category: uploadForm.category });

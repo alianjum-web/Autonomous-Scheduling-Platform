@@ -1,48 +1,31 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import type { Session } from "@supabase/supabase-js";
+import { useCallback } from "react";
 
+import { selectAccessToken, selectAuthLoading, selectAuthSession, selectTenantId } from "@/components/common/store/authSelectors";
+import { setSession } from "@/components/common/store/authSlice";
+import { useAppDispatch, useAppSelector } from "@/components/common/store/hooks";
 import { createClient } from "@/lib/supabase/client";
 
 export function useAuthSession() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const supabase = createClient();
+  const dispatch = useAppDispatch();
+  const session = useAppSelector(selectAuthSession);
+  const loading = useAppSelector(selectAuthLoading);
+  const tenantId = useAppSelector(selectTenantId);
+  const accessToken = useAppSelector(selectAccessToken);
 
   const refreshSession = useCallback(async () => {
+    const supabase = createClient();
     const { data } = await supabase.auth.refreshSession();
-    setSession(data.session);
+    dispatch(setSession(data.session));
     return data.session;
-  }, [supabase.auth]);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-    });
-
-    return () => subscription.unsubscribe();
-  }, [supabase.auth]);
-
-  const tenantId =
-    session?.user?.app_metadata?.tenant_id ??
-    (session?.access_token
-      ? JSON.parse(atob(session.access_token.split(".")[1] ?? ""))?.tenant_id
-      : null);
+  }, [dispatch]);
 
   return {
     session,
     loading,
-    tenantId: tenantId as string | null,
-    accessToken: session?.access_token ?? null,
+    tenantId,
+    accessToken,
     refreshSession,
   };
 }

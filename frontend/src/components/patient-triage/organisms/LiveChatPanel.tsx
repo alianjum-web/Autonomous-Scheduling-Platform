@@ -1,11 +1,10 @@
 "use client";
 
 import { useRef, useEffect, useCallback } from "react";
-import { useDispatch, useSelector } from "react-redux";
 import { Bot, MessageCircle, Sparkles } from "lucide-react";
 
-import type { RootState } from "@/components/common/store";
 import { useReduxForm } from "@/components/common/hooks/useReduxForm";
+import { useAppDispatch, useAppSelector } from "@/components/common/store/hooks";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -17,6 +16,15 @@ import { TriageStatusBar } from "@/components/patient-triage/molecules/TriageSta
 import { SlotBookingDrawer } from "@/components/patient-triage/organisms/SlotBookingDrawer";
 import { BookingConfirmation } from "@/components/patient-triage/screens/BookingConfirmation";
 import { useStreamingChat } from "@/components/patient-triage/hooks/useStreamingChat";
+import {
+  selectAvailableSlots,
+  selectBookingComplete,
+  selectBookingDrawerOpen,
+  selectBookingStep,
+  selectConfirmationCode,
+  selectSelectedSlot,
+  selectSlotsKey,
+} from "@/components/patient-triage/store/bookingSelectors";
 import { setDismissedSlotsKey } from "@/components/patient-triage/store/bookingSlice";
 import {
   addUserMessage,
@@ -24,6 +32,15 @@ import {
   setDraftMessage,
   setEmergencyDetected,
 } from "@/components/patient-triage/store/triageSlice";
+import {
+  selectDraftMessage,
+  selectEmergencyDetected,
+  selectTriageError,
+  selectTriageIsStreaming,
+  selectTriageMessages,
+  selectTriageSessionId,
+  selectTriageStatus,
+} from "@/components/patient-triage/store/triageSelectors";
 import { detectEmergencyKeywords } from "@/lib/emergencyKeywords";
 
 interface ChatMessageForm {
@@ -35,20 +52,22 @@ interface LiveChatPanelProps {
 }
 
 export function LiveChatPanel({ disabled = false }: LiveChatPanelProps) {
-  const dispatch = useDispatch();
-  const { messages, status, isStreaming, error, sessionId, emergencyDetected, draftMessage } =
-    useSelector((state: RootState) => state.triage);
-  const {
-    bookingStep,
-    availableSlots,
-    confirmationCode,
-    selectedSlot,
-    dismissedSlotsKey,
-  } = useSelector((state: RootState) => state.booking);
+  const dispatch = useAppDispatch();
+  const messages = useAppSelector(selectTriageMessages);
+  const status = useAppSelector(selectTriageStatus);
+  const isStreaming = useAppSelector(selectTriageIsStreaming);
+  const error = useAppSelector(selectTriageError);
+  const sessionId = useAppSelector(selectTriageSessionId);
+  const emergencyDetected = useAppSelector(selectEmergencyDetected);
+  const draftMessage = useAppSelector(selectDraftMessage);
+  const bookingStep = useAppSelector(selectBookingStep);
+  const availableSlots = useAppSelector(selectAvailableSlots);
+  const confirmationCode = useAppSelector(selectConfirmationCode);
+  const selectedSlot = useAppSelector(selectSelectedSlot);
+  const slotsKey = useAppSelector(selectSlotsKey);
+  const drawerOpen = useAppSelector(selectBookingDrawerOpen);
+  const bookingComplete = useAppSelector(selectBookingComplete);
   const { startChat, sendMessage } = useStreamingChat();
-
-  const slotsKey = availableSlots.map((s) => s.iso).join("|");
-  const drawerOpen = slotsKey.length > 0 && dismissedSlotsKey !== slotsKey;
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const form = useReduxForm<ChatMessageForm>({ message: draftMessage });
@@ -78,7 +97,7 @@ export function LiveChatPanel({ disabled = false }: LiveChatPanelProps) {
     await sendMessage(value);
   });
 
-  if (bookingStep === "complete" && confirmationCode && selectedSlot) {
+  if (bookingComplete && confirmationCode && selectedSlot) {
     return (
       <BookingConfirmation
         confirmationCode={confirmationCode}

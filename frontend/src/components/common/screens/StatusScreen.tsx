@@ -1,24 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import { Activity, CheckCircle2, Database, RefreshCw, Server, XCircle } from "lucide-react";
 
 import { PageHeader, PageShell } from "@/components/common/layout/PageShell";
+import { useGetHealthQuery } from "@/components/common/store/healthApi";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-
-interface HealthChecks {
-  database: boolean;
-  redis: boolean;
-  openai: boolean;
-  openai_latency_ms: number | null;
-}
-
-interface HealthResponse {
-  status: string;
-  checks: HealthChecks;
-}
 
 function StatusRow({
   label,
@@ -47,53 +35,12 @@ function StatusRow({
 }
 
 export function StatusScreen() {
-  const [health, setHealth] = useState<HealthResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
   const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+  const { data: health, isLoading, isFetching, error, refetch } = useGetHealthQuery();
 
-  const fetchHealth = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`${apiBase}/health`, { cache: "no-store" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as HealthResponse;
-      setHealth(data);
-    } catch {
-      setError("Unable to reach the API health endpoint.");
-      setHealth(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [apiBase]);
-
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch(`${apiBase}/health`, { cache: "no-store" });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = (await res.json()) as HealthResponse;
-        if (active) setHealth(data);
-      } catch {
-        if (active) {
-          setError("Unable to reach the API health endpoint.");
-          setHealth(null);
-        }
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [apiBase]);
-
+  const loading = isLoading || isFetching;
   const allHealthy = health?.status === "healthy";
+  const errorMessage = error ? "Unable to reach the API health endpoint." : null;
 
   return (
     <PageShell maxWidth="2xl" className="gap-8 pb-16">
@@ -102,7 +49,7 @@ export function StatusScreen() {
         title="System Status"
         description="Live health checks for the FastAPI gateway, database, Redis, and OpenAI connectivity."
         actions={
-          <Button variant="outline" size="sm" onClick={fetchHealth} disabled={loading} className="gap-1.5">
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={loading} className="gap-1.5">
             <RefreshCw className={cn("size-4", loading && "animate-spin")} aria-hidden />
             Refresh
           </Button>
@@ -119,8 +66,8 @@ export function StatusScreen() {
         <CardContent>
           {loading && !health ? (
             <p className="text-sm text-muted-foreground">Checking services…</p>
-          ) : error ? (
-            <p className="text-sm text-destructive">{error}</p>
+          ) : errorMessage ? (
+            <p className="text-sm text-destructive">{errorMessage}</p>
           ) : health ? (
             <>
               <p className="mb-4 text-sm capitalize text-muted-foreground">
