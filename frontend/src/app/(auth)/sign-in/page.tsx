@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 
 import { SignInScreen } from "@/components/auth/screens/SignInScreen";
-import { LoadingScreen } from "@/components/common/atoms/LoadingScreen";
+import { LoadingScreen } from "@/components/common/molecules/LoadingScreen";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Sign in" };

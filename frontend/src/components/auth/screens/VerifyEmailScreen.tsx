@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Mail, RefreshCw } from "lucide-react";
 
+import { AuthErrorBanner } from "@/components/auth/atoms/AuthErrorBanner";
+import { AuthSuccessBanner } from "@/components/auth/atoms/AuthSuccessBanner";
 import { AuthLayout } from "@/components/auth/layout/AuthLayout";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -49,8 +51,7 @@ export function VerifyEmailScreen() {
         </div>
         {email ? (
           <p className="text-sm text-muted-foreground">
-            Sent to{" "}
-            <span className="font-medium text-foreground">{email}</span>
+            Sent to <span className="font-medium text-foreground">{email}</span>
           </p>
         ) : (
           <p className="text-sm text-muted-foreground">
@@ -58,16 +59,12 @@ export function VerifyEmailScreen() {
           </p>
         )}
         <p className="text-sm leading-relaxed text-muted-foreground">
-          After confirming, you&apos;ll set up your clinic workspace and can start using patient
-          chat, scheduling, and staff tools.
+          After confirming, you&apos;ll set up your clinic workspace and can start using patient chat,
+          scheduling, and staff tools.
         </p>
 
-        {message ? <p className="status-success w-full text-left">{message}</p> : null}
-        {error ? (
-          <p className="w-full rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {error}
-          </p>
-        ) : null}
+        {message ? <AuthSuccessBanner message={message} className="status-success w-full text-left" /> : null}
+        {error ? <AuthErrorBanner message={error} /> : null}
 
         <div className="flex w-full flex-col gap-2">
           <Button

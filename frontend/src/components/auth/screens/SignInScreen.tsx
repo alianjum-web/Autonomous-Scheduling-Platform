@@ -2,13 +2,16 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
 
+import { AuthErrorBanner } from "@/components/auth/atoms/AuthErrorBanner";
+import { AuthSubmitButton } from "@/components/auth/atoms/AuthSubmitButton";
+import { AuthSuccessBanner } from "@/components/auth/atoms/AuthSuccessBanner";
+import { useAuthSubmitState } from "@/components/auth/hooks/useAuthSubmitState";
 import { AuthLayout } from "@/components/auth/layout/AuthLayout";
-import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { AuthEmailField } from "@/components/auth/molecules/AuthEmailField";
+import { AuthPasswordField } from "@/components/auth/molecules/AuthPasswordField";
 import { useReduxForm } from "@/components/common/hooks/useReduxForm";
+import { Form } from "@/components/ui/form";
 import { createClient } from "@/lib/supabase/client";
 
 interface SignInFormValues {
@@ -26,9 +29,8 @@ export function SignInScreen() {
   const redirectTo = searchParams.get("next") ?? "/chat";
   const queryError = searchParams.get("error");
   const queryMessage = searchParams.get("message");
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { submitError, setSubmitError, successMessage, setSuccessMessage, loading, setLoading, clearMessages } =
+    useAuthSubmitState();
 
   const bannerError = queryError
     ? (ERROR_MESSAGES[queryError] ?? "Sign in failed. Please try again.")
@@ -42,8 +44,7 @@ export function SignInScreen() {
   const supabase = createClient();
 
   const onSubmit = form.handleSubmit(async ({ email, password }) => {
-    setSubmitError(null);
-    setSuccessMessage(null);
+    clearMessages();
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
@@ -64,57 +65,28 @@ export function SignInScreen() {
     >
       <Form {...form}>
         <form onSubmit={onSubmit} className="space-y-5">
-          <FormField
-            control={form.control}
-            name="email"
-            rules={{ required: "Email is required" }}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email</FormLabel>
-                <FormControl>
-                  <Input type="email" autoComplete="email" placeholder="you@clinic.com" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
+          <AuthEmailField control={form.control} name="email" />
+          <AuthPasswordField
             control={form.control}
             name="password"
-            rules={{ required: "Password is required" }}
-            render={({ field }) => (
-              <FormItem>
-                <div className="flex items-center justify-between">
-                  <FormLabel>Password</FormLabel>
-                  <Link href="/forgot-password" className="text-xs font-medium text-primary hover:underline">
-                    Forgot password?
-                  </Link>
-                </div>
-                <FormControl>
-                  <Input
-                    type="password"
-                    autoComplete="current-password"
-                    placeholder="••••••••"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            label="Password"
+            labelExtra={
+              <Link href="/forgot-password" className="text-xs font-medium text-primary hover:underline">
+                Forgot password?
+              </Link>
+            }
           />
 
-          {(bannerSuccess || successMessage) ? (
-            <p className="status-success text-left">{bannerSuccess ?? successMessage}</p>
+          {bannerSuccess || successMessage ? (
+            <AuthSuccessBanner message={bannerSuccess ?? successMessage ?? ""} />
           ) : null}
-          {(bannerError || submitError) ? (
-            <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {bannerError ?? submitError}
-            </p>
+          {bannerError || submitError ? (
+            <AuthErrorBanner message={bannerError ?? submitError ?? ""} />
           ) : null}
 
-          <Button type="submit" className="h-11 w-full text-base shadow-md" disabled={loading}>
-            {loading ? "Signing in…" : "Sign in"}
-          </Button>
+          <AuthSubmitButton loading={loading} loadingLabel="Signing in…">
+            Sign in
+          </AuthSubmitButton>
         </form>
       </Form>
 

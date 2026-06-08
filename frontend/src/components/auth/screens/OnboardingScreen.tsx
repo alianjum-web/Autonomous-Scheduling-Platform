@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Building2, UserCircle } from "lucide-react";
 
+import { AuthErrorBanner } from "@/components/auth/atoms/AuthErrorBanner";
+import { AuthSubmitButton } from "@/components/auth/atoms/AuthSubmitButton";
 import { AuthLayout } from "@/components/auth/layout/AuthLayout";
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
 import { Button } from "@/components/ui/button";
@@ -155,15 +157,11 @@ export function OnboardingScreen() {
             )}
           />
 
-          {submitError ? (
-            <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {submitError}
-            </p>
-          ) : null}
+          {submitError ? <AuthErrorBanner message={submitError} /> : null}
 
-          <Button type="submit" className="h-11 w-full shadow-md" disabled={submitting}>
-            {submitting ? "Creating workspace…" : "Complete setup"}
-          </Button>
+          <AuthSubmitButton loading={submitting} loadingLabel="Creating workspace…">
+            Complete setup
+          </AuthSubmitButton>
         </form>
       </Form>
 

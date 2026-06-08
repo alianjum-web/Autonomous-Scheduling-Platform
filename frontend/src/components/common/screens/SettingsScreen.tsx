@@ -6,7 +6,7 @@ import { Bell, Building2, Shield, User } from "lucide-react";
 
 import { useAdminGuard } from "@/components/common/hooks/useAdminGuard";
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
-import { LoadingScreen } from "@/components/common/atoms/LoadingScreen";
+import { LoadingScreen } from "@/components/common/molecules/LoadingScreen";
 import { PageShell } from "@/components/common/layout/PageShell";
 import { AccessGate } from "@/components/common/molecules/AccessGate";
 import { PageHeader } from "@/components/common/molecules/PageHeader";

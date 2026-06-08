@@ -4,12 +4,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { AuthErrorBanner } from "@/components/auth/atoms/AuthErrorBanner";
+import { AuthSubmitButton } from "@/components/auth/atoms/AuthSubmitButton";
+import { validatePasswordPair } from "@/components/auth/hooks/validatePasswordPair";
 import { AuthLayout } from "@/components/auth/layout/AuthLayout";
-import { LoadingScreen } from "@/components/common/atoms/LoadingScreen";
-import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { AuthPasswordField } from "@/components/auth/molecules/AuthPasswordField";
+import { LoadingScreen } from "@/components/common/molecules/LoadingScreen";
 import { useReduxForm } from "@/components/common/hooks/useReduxForm";
+import { Button } from "@/components/ui/button";
+import { Form } from "@/components/ui/form";
 import { createClient } from "@/lib/supabase/client";
 
 interface ResetPasswordFormValues {
@@ -33,12 +36,9 @@ export function ResetPasswordScreen() {
 
   const onSubmit = form.handleSubmit(async ({ password, confirmPassword }) => {
     setError(null);
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+    const passwordError = validatePasswordPair(password, confirmPassword);
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
     setLoading(true);
@@ -80,42 +80,25 @@ export function ResetPasswordScreen() {
     <AuthLayout title="Choose a new password" subtitle="Enter a strong password for your account.">
       <Form {...form}>
         <form onSubmit={onSubmit} className="space-y-5">
-          <FormField
+          <AuthPasswordField
             control={form.control}
             name="password"
-            rules={{ required: "Password is required" }}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>New password</FormLabel>
-                <FormControl>
-                  <Input type="password" autoComplete="new-password" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            label="New password"
+            autoComplete="new-password"
+            placeholder=""
           />
-          <FormField
+          <AuthPasswordField
             control={form.control}
             name="confirmPassword"
+            label="Confirm password"
+            autoComplete="new-password"
+            placeholder=""
             rules={{ required: "Please confirm your password" }}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Confirm password</FormLabel>
-                <FormControl>
-                  <Input type="password" autoComplete="new-password" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
           />
-          {error ? (
-            <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {error}
-            </p>
-          ) : null}
-          <Button type="submit" className="h-11 w-full shadow-md" disabled={loading}>
-            {loading ? "Updating…" : "Update password"}
-          </Button>
+          {error ? <AuthErrorBanner message={error} /> : null}
+          <AuthSubmitButton loading={loading} loadingLabel="Updating…">
+            Update password
+          </AuthSubmitButton>
         </form>
       </Form>
 

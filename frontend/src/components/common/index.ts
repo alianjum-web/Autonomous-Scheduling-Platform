@@ -1,5 +1,5 @@
 export { ClinicalImage } from "./atoms/ClinicalImage";
-export { LoadingScreen } from "./atoms/LoadingScreen";
+export { LoadingScreen } from "./molecules/LoadingScreen";
 export { MiniBarChart } from "./atoms/MiniBarChart";
 export { StatCard } from "./atoms/StatCard";
 export { ThemeToggle } from "./atoms/ThemeToggle";

@@ -2,13 +2,18 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 
+import { AuthErrorBanner } from "@/components/auth/atoms/AuthErrorBanner";
+import { AuthSubmitButton } from "@/components/auth/atoms/AuthSubmitButton";
+import { AuthSuccessBanner } from "@/components/auth/atoms/AuthSuccessBanner";
+import { useAuthSubmitState } from "@/components/auth/hooks/useAuthSubmitState";
+import { validatePasswordPair } from "@/components/auth/hooks/validatePasswordPair";
 import { AuthLayout } from "@/components/auth/layout/AuthLayout";
-import { Button } from "@/components/ui/button";
+import { AuthEmailField } from "@/components/auth/molecules/AuthEmailField";
+import { AuthPasswordField } from "@/components/auth/molecules/AuthPasswordField";
+import { useReduxForm } from "@/components/common/hooks/useReduxForm";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useReduxForm } from "@/components/common/hooks/useReduxForm";
 import { createClient } from "@/lib/supabase/client";
 
 interface SignUpFormValues {
@@ -20,9 +25,8 @@ interface SignUpFormValues {
 
 export function SignUpScreen() {
   const router = useRouter();
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { submitError, setSubmitError, successMessage, setSuccessMessage, loading, setLoading, clearMessages } =
+    useAuthSubmitState();
 
   const form = useReduxForm<SignUpFormValues>({
     fullName: "",
@@ -33,15 +37,11 @@ export function SignUpScreen() {
   const supabase = createClient();
 
   const onSubmit = form.handleSubmit(async ({ fullName, email, password, confirmPassword }) => {
-    setSubmitError(null);
-    setSuccessMessage(null);
+    clearMessages();
 
-    if (password !== confirmPassword) {
-      setSubmitError("Passwords do not match.");
-      return;
-    }
-    if (password.length < 8) {
-      setSubmitError("Password must be at least 8 characters.");
+    const passwordError = validatePasswordPair(password, confirmPassword);
+    if (passwordError) {
+      setSubmitError(passwordError);
       return;
     }
 
@@ -91,61 +91,28 @@ export function SignUpScreen() {
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name="email"
-            rules={{ required: "Email is required" }}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Work email</FormLabel>
-                <FormControl>
-                  <Input type="email" autoComplete="email" placeholder="you@clinic.com" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
+          <AuthEmailField control={form.control} name="email" label="Work email" />
+          <AuthPasswordField
             control={form.control}
             name="password"
-            rules={{ required: "Password is required" }}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Password</FormLabel>
-                <FormControl>
-                  <Input type="password" autoComplete="new-password" placeholder="Min. 8 characters" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            label="Password"
+            autoComplete="new-password"
+            placeholder="Min. 8 characters"
           />
-          <FormField
+          <AuthPasswordField
             control={form.control}
             name="confirmPassword"
+            label="Confirm password"
+            autoComplete="new-password"
             rules={{ required: "Please confirm your password" }}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Confirm password</FormLabel>
-                <FormControl>
-                  <Input type="password" autoComplete="new-password" placeholder="••••••••" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
           />
 
-          {submitError ? (
-            <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {submitError}
-            </p>
-          ) : null}
-          {successMessage ? (
-            <p className="status-success text-left">{successMessage}</p>
-          ) : null}
+          {submitError ? <AuthErrorBanner message={submitError} /> : null}
+          {successMessage ? <AuthSuccessBanner message={successMessage} /> : null}
 
-          <Button type="submit" className="h-11 w-full text-base shadow-md" disabled={loading}>
-            {loading ? "Creating account…" : "Create account"}
-          </Button>
+          <AuthSubmitButton loading={loading} loadingLabel="Creating account…">
+            Create account
+          </AuthSubmitButton>
         </form>
       </Form>
 
