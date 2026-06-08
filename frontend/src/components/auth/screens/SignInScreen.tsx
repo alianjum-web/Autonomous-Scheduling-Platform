@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
-import { AuthLayout } from "@/components/common/layout/AuthLayout";
+import { AuthLayout } from "@/components/auth/layout/AuthLayout";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   auth_callback_failed: "Authentication failed. Please try signing in again.",
 };
 
-export function SignInForm() {
+export function SignInScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("next") ?? "/chat";

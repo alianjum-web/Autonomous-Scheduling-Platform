@@ -14,7 +14,7 @@ import { TypingIndicator } from "@/components/patient-triage/atoms/TypingIndicat
 import { MessageRow } from "@/components/patient-triage/molecules/MessageRow";
 import { TriageStatusBar } from "@/components/patient-triage/molecules/TriageStatusBar";
 import { SlotBookingDrawer } from "@/components/patient-triage/organisms/SlotBookingDrawer";
-import { BookingConfirmation } from "@/components/patient-triage/screens/BookingConfirmation";
+import { BookingConfirmation } from "@/components/patient-triage/molecules/BookingConfirmation";
 import { useStreamingChat } from "@/components/patient-triage/hooks/useStreamingChat";
 import {
   selectAvailableSlots,

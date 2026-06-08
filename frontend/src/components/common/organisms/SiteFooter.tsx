@@ -6,10 +6,10 @@ export function SiteFooter() {
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
         <div className="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
           <div>
-          <p className="font-bold">Symptra Scheduling</p>
-          <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-            AI-first patient intake · HIPAA-aware · Multi-tenant clinical scheduling
-          </p>
+            <p className="font-bold">Symptra Scheduling</p>
+            <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+              AI-first patient intake · HIPAA-aware · Multi-tenant clinical scheduling
+            </p>
           </div>
           <div className="grid grid-cols-2 gap-8 text-sm sm:grid-cols-4">
             <div className="space-y-2">

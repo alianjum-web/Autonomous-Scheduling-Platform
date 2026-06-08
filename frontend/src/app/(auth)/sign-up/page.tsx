@@ -1,8 +1,8 @@
-import { SignUpForm } from "@/components/common/auth/SignUpForm";
+import { SignUpScreen } from "@/components/auth/screens/SignUpScreen";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Sign up" };
 
 export default function SignUpPage() {
-  return <SignUpForm />;
+  return <SignUpScreen />;
 }

@@ -2,11 +2,11 @@
 
 import { useEffect, type ReactNode } from "react";
 
+import { useAppDispatch } from "@/components/common/store/hooks";
+import { resetFeatureState } from "@/components/common/store/resetFeatureState";
 import { createClient } from "@/lib/supabase/client";
 
 import { setSession } from "./authSlice";
-import { useAppDispatch } from "./hooks";
-import { resetFeatureState } from "./resetFeatureState";
 
 export function AuthBootstrap({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch();

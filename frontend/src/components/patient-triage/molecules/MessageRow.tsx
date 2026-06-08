@@ -1,7 +1,7 @@
 import { Bot, User } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import type { ChatMessage } from "@/components/patient-triage/store/triageSlice";
+import type { ChatMessage } from "@/types/triage";
 
 interface MessageRowProps {
   message: ChatMessage;

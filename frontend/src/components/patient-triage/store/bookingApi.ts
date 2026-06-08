@@ -1,5 +1,5 @@
 import { baseApi } from "@/components/common/store/baseApi";
-import type { Appointment } from "@/components/appointments/store/appointmentsSlice";
+import type { Appointment } from "@/types/appointments";
 
 export const bookingApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({

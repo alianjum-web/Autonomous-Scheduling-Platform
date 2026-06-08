@@ -3,7 +3,7 @@ import { resetClinicDocs } from "@/components/clinic-docs/store/clinicDocsSlice"
 import { resetBooking } from "@/components/patient-triage/store/bookingSlice";
 import { resetTriage } from "@/components/patient-triage/store/triageSlice";
 
-import { clearAuth } from "./authSlice";
+import { clearAuth } from "@/components/auth/store/authSlice";
 import type { AppDispatch } from "./index";
 
 /** Clears feature slices after sign-out or tenant switch. */

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Building2, UserCircle } from "lucide-react";
 
-import { AuthLayout } from "@/components/common/layout/AuthLayout";
+import { AuthLayout } from "@/components/auth/layout/AuthLayout";
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -19,7 +19,7 @@ interface OnboardingFormValues {
   role: "patient" | "clinic_admin";
 }
 
-export function OnboardingForm() {
+export function OnboardingScreen() {
   const router = useRouter();
   const { session, loading, tenantId, refreshSession } = useAuthSession();
   const [submitError, setSubmitError] = useState<string | null>(null);

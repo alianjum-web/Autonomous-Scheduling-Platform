@@ -1,8 +1,8 @@
-import { ForgotPasswordForm } from "@/components/common/auth/ForgotPasswordForm";
+import { ForgotPasswordScreen } from "@/components/auth/screens/ForgotPasswordScreen";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Forgot password" };
 
 export default function ForgotPasswordPage() {
-  return <ForgotPasswordForm />;
+  return <ForgotPasswordScreen />;
 }

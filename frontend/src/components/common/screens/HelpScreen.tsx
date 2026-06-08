@@ -9,11 +9,21 @@ import {
   Users,
 } from "lucide-react";
 
-import { PageHeader, PageShell } from "@/components/common/layout/PageShell";
+import { ClinicalImage } from "@/components/common/atoms/ClinicalImage";
+import { PageShell } from "@/components/common/layout/PageShell";
+import { PageHeader } from "@/components/common/molecules/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import type { ImageAssetKey } from "@/lib/constants/images";
 
-const GUIDES = [
+const GUIDES: {
+  icon: typeof MessageSquare;
+  title: string;
+  description: string;
+  href: string;
+  cta: string;
+  imageKey: ImageAssetKey;
+}[] = [
   {
     icon: MessageSquare,
     title: "Patient intake chat",
@@ -21,6 +31,7 @@ const GUIDES = [
       "Sign in, open Patient Chat, and start a session. Describe symptoms or scheduling needs — the AI uses your clinic knowledge base and live slot availability.",
     href: "/chat",
     cta: "Open chat",
+    imageKey: "chat",
   },
   {
     icon: Upload,
@@ -29,6 +40,7 @@ const GUIDES = [
       "Admins upload protocols, pricing, insurance policies, and FAQs. Documents are chunked, embedded, and retrieved during patient conversations.",
     href: "/clinic-docs",
     cta: "Manage docs",
+    imageKey: "docs",
   },
   {
     icon: CalendarCheck,
@@ -37,6 +49,7 @@ const GUIDES = [
       "Patients book through chat; staff view day/week calendars with Redis-backed slot locks that prevent double-booking.",
     href: "/appointments",
     cta: "View calendar",
+    imageKey: "appointments",
   },
   {
     icon: Users,
@@ -45,8 +58,9 @@ const GUIDES = [
       "Emergencies and human handoffs appear in real time on the Front Desk workspace via Supabase Realtime.",
     href: "/front-desk",
     cta: "Open workspace",
+    imageKey: "frontDesk",
   },
-] as const;
+];
 
 const FAQ = [
   {
@@ -74,6 +88,7 @@ export function HelpScreen() {
         eyebrow="Support"
         title="Help Center"
         description="Quick guides for patients and clinic staff using the Autonomous Scheduling Platform."
+        imageKey="team"
         actions={
           <Button asChild variant="outline" size="sm">
             <Link href="/status">System status</Link>
@@ -82,8 +97,12 @@ export function HelpScreen() {
       />
 
       <section className="grid gap-4 sm:grid-cols-2">
-        {GUIDES.map(({ icon: Icon, title, description, href, cta }) => (
-          <Card key={href} className="hero-glow flex flex-col">
+        {GUIDES.map(({ icon: Icon, title, description, href, cta, imageKey }) => (
+          <Card key={href} className="hero-glow flex flex-col overflow-hidden">
+            <div className="relative h-28">
+              <ClinicalImage asset={imageKey} variant="thumb" />
+              <div className="absolute inset-0 bg-gradient-to-t from-card via-card/30 to-transparent" />
+            </div>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Icon className="size-5 text-primary" aria-hidden />

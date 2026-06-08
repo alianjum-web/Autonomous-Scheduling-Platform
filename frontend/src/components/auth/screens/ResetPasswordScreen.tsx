@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { AuthLayout } from "@/components/common/layout/AuthLayout";
-import { LoadingScreen } from "@/components/common/layout/PageShell";
+import { AuthLayout } from "@/components/auth/layout/AuthLayout";
+import { LoadingScreen } from "@/components/common/atoms/LoadingScreen";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ interface ResetPasswordFormValues {
   confirmPassword: string;
 }
 
-export function ResetPasswordForm() {
+export function ResetPasswordScreen() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);

@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 
-import { VerifyEmailForm } from "@/components/common/auth/VerifyEmailForm";
-import { LoadingScreen } from "@/components/common/layout/PageShell";
+import { VerifyEmailScreen } from "@/components/auth/screens/VerifyEmailScreen";
+import { LoadingScreen } from "@/components/common/atoms/LoadingScreen";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Verify email" };
@@ -9,7 +9,7 @@ export const metadata = { title: "Verify email" };
 export default function VerifyEmailPage() {
   return (
     <Suspense fallback={<LoadingScreen message="Loading…" />}>
-      <VerifyEmailForm />
+      <VerifyEmailScreen />
     </Suspense>
   );
 }

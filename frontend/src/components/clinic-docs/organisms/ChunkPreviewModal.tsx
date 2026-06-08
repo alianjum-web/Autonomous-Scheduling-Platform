@@ -1,9 +1,9 @@
 "use client";
 
-import { Modal } from "@/components/common/Modal";
+import { Modal } from "@/components/common/molecules/Modal";
 import { ChunkPreviewRow } from "@/components/clinic-docs/molecules/ChunkPreviewRow";
 import { useGetDocumentChunksQuery } from "@/components/clinic-docs/store/clinicDocsApi";
-import type { ClinicDocument } from "@/components/clinic-docs/store/clinicDocsSlice";
+import type { ClinicDocument } from "@/types/clinic-docs";
 
 interface ChunkPreviewModalProps {
   document: ClinicDocument | null;

@@ -2,7 +2,7 @@ import { FileText, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { ClinicDocument } from "@/components/clinic-docs/store/clinicDocsSlice";
+import type { ClinicDocument } from "@/types/clinic-docs";
 
 const CATEGORY_LABELS: Record<string, string> = {
   treatment_protocol: "Treatment Protocol",

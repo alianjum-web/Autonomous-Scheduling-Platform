@@ -7,7 +7,10 @@ import { DailyCalendarGrid } from "@/components/appointments/organisms/DailyCale
 import { Button } from "@/components/ui/button";
 import { useAdminGuard } from "@/components/common/hooks/useAdminGuard";
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
-import { AccessGate, LoadingScreen, PageHeader, PageShell } from "@/components/common/layout/PageShell";
+import { LoadingScreen } from "@/components/common/atoms/LoadingScreen";
+import { PageShell } from "@/components/common/layout/PageShell";
+import { AccessGate } from "@/components/common/molecules/AccessGate";
+import { PageHeader } from "@/components/common/molecules/PageHeader";
 import { useAppDispatch, useAppSelector } from "@/components/common/store/hooks";
 import {
   selectAppointments,
@@ -19,7 +22,6 @@ import { useEscalationWatch } from "@/components/appointments/hooks/useEscalatio
 import { useGetAppointmentsQuery } from "@/components/appointments/store/appointmentsApi";
 import { dismissEscalation, setAppointments } from "@/components/appointments/store/appointmentsSlice";
 import { useEscalateSessionMutation } from "@/components/patient-triage/store/triageApi";
-import { IMAGES } from "@/lib/constants/images";
 
 export function FrontDeskWorkspace() {
   const dispatch = useAppDispatch();
@@ -47,6 +49,7 @@ export function FrontDeskWorkspace() {
         title="Sign in to access front desk"
         description="Real-time escalations and today's schedule require an authenticated staff session."
         icon={<LayoutDashboard className="size-8" />}
+        imageKey="frontDesk"
         requireAdmin
       />
     );
@@ -57,6 +60,7 @@ export function FrontDeskWorkspace() {
         title="Front-desk access required"
         description="Your account needs clinic_admin or admin role in Supabase app metadata."
         icon={<LayoutDashboard className="size-8" />}
+        imageKey="frontDesk"
         requireAdmin
       />
     );
@@ -68,8 +72,7 @@ export function FrontDeskWorkspace() {
         eyebrow="Staff tools"
         title="Front Desk Workspace"
         description="Monitor real-time escalations and today's appointment calendar in one view."
-        image={IMAGES.frontDesk}
-        imageAlt="Front desk team at work"
+        imageKey="frontDesk"
       />
 
       <div className="grid min-h-[480px] flex-1 gap-4 lg:grid-cols-2">

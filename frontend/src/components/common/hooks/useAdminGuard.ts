@@ -1,6 +1,6 @@
 "use client";
 
-import { selectAuthLoading, selectClinicRole, selectIsAdmin } from "@/components/common/store/authSelectors";
+import { selectAuthLoading, selectClinicRole, selectIsAdmin } from "@/components/auth/store/authSelectors";
 import { useAppSelector } from "@/components/common/store/hooks";
 
 export function useAdminGuard() {

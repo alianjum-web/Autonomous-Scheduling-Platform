@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import { AuthLayout } from "@/components/common/layout/AuthLayout";
+import { AuthLayout } from "@/components/auth/layout/AuthLayout";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ interface ForgotPasswordFormValues {
   email: string;
 }
 
-export function ForgotPasswordForm() {
+export function ForgotPasswordScreen() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);

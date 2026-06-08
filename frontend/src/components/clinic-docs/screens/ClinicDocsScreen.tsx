@@ -5,7 +5,10 @@ import { FileSearch } from "lucide-react";
 
 import { useAdminGuard } from "@/components/common/hooks/useAdminGuard";
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
-import { AccessGate, LoadingScreen, PageHeader, PageShell } from "@/components/common/layout/PageShell";
+import { LoadingScreen } from "@/components/common/atoms/LoadingScreen";
+import { PageShell } from "@/components/common/layout/PageShell";
+import { AccessGate } from "@/components/common/molecules/AccessGate";
+import { PageHeader } from "@/components/common/molecules/PageHeader";
 import { useAppDispatch, useAppSelector } from "@/components/common/store/hooks";
 import {
   selectClinicDocsUi,
@@ -27,7 +30,6 @@ import {
   setPreviewOpen,
   setSelectedDoc,
 } from "@/components/clinic-docs/store/clinicDocsSlice";
-import { IMAGES } from "@/lib/constants/images";
 
 export function ClinicDocsScreen() {
   const dispatch = useAppDispatch();
@@ -54,6 +56,7 @@ export function ClinicDocsScreen() {
         title="Sign in to manage documents"
         description="Clinic document ingestion and RAG embedding require an authenticated admin session."
         icon={<FileSearch className="size-8" />}
+        imageKey="docs"
         requireAdmin
       />
     );
@@ -65,6 +68,7 @@ export function ClinicDocsScreen() {
         title="Admin access required"
         description="Only clinic administrators can upload and manage knowledge base documents."
         icon={<FileSearch className="size-8" />}
+        imageKey="docs"
         requireAdmin
       />
     );
@@ -76,8 +80,7 @@ export function ClinicDocsScreen() {
         eyebrow="Knowledge base"
         title="Clinic Documents"
         description="Upload treatment protocols, pricing guides, insurance policies, and FAQs for RAG-powered patient intake."
-        image={IMAGES.docs}
-        imageAlt="Medical documentation and research"
+        imageKey="docs"
       />
 
       <section className="grid gap-6 md:grid-cols-2">

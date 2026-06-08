@@ -1,38 +1,22 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
 import type {
-  ClinicDocumentRow,
+  ClinicDocument,
   DocumentCategory,
-  IngestionJobRow,
+  IngestionJob,
   IngestionJobStatus,
-} from "@/types/database";
+  UploadFormState,
+  UploadProgress,
+} from "@/types/clinic-docs";
 
-export type { DocumentCategory, IngestionJobStatus };
-
-export type ClinicDocument = Omit<ClinicDocumentRow, "tenant_id">;
-
-export type IngestionJob = Pick<
-  IngestionJobRow,
-  "id" | "filename" | "category" | "status" | "progress_pct" | "chunks_total" | "chunks_done"
-> & {
-  error_message?: string | null;
-  document_id?: string | null;
+export type {
+  ClinicDocument,
+  DocumentCategory,
+  IngestionJob,
+  IngestionJobStatus,
+  UploadFormState,
+  UploadProgress,
 };
-
-export interface UploadProgress {
-  jobId: string;
-  filename: string;
-  progress: number;
-  status: IngestionJobStatus;
-}
-
-export interface UploadFormState {
-  category: DocumentCategory;
-  pendingFileName: string | null;
-  pendingFileSize: number | null;
-  dragOver: boolean;
-  error: string | null;
-}
 
 export interface ClinicDocsUiState {
   activeJobId: string | null;

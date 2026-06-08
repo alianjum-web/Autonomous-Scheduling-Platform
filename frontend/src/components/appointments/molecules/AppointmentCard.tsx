@@ -1,6 +1,6 @@
 import { AppointmentStatusTag } from "@/components/appointments/atoms/AppointmentStatusTag";
 import { ProviderAvatar } from "@/components/appointments/atoms/ProviderAvatar";
-import type { Appointment } from "@/components/appointments/store/appointmentsSlice";
+import type { Appointment } from "@/types/appointments";
 
 function formatTime(iso: string) {
   try {

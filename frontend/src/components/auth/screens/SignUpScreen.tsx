@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { AuthLayout } from "@/components/common/layout/AuthLayout";
+import { AuthLayout } from "@/components/auth/layout/AuthLayout";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ interface SignUpFormValues {
   confirmPassword: string;
 }
 
-export function SignUpForm() {
+export function SignUpScreen() {
   const router = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);

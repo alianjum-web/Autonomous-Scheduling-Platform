@@ -1,6 +1,6 @@
 "use client";
 
-import type { Appointment } from "@/components/appointments/store/appointmentsSlice";
+import type { Appointment } from "@/types/appointments";
 
 const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
 

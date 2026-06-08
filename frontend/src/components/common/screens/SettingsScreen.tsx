@@ -6,7 +6,10 @@ import { Bell, Building2, Shield, User } from "lucide-react";
 
 import { useAdminGuard } from "@/components/common/hooks/useAdminGuard";
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
-import { AccessGate, LoadingScreen, PageHeader, PageShell } from "@/components/common/layout/PageShell";
+import { LoadingScreen } from "@/components/common/atoms/LoadingScreen";
+import { PageShell } from "@/components/common/layout/PageShell";
+import { AccessGate } from "@/components/common/molecules/AccessGate";
+import { PageHeader } from "@/components/common/molecules/PageHeader";
 import { resetFeatureState } from "@/components/common/store/resetFeatureState";
 import { useGetUserProfileQuery } from "@/components/common/store/settingsApi";
 import { useAppDispatch } from "@/components/common/store/hooks";
@@ -39,6 +42,7 @@ export function SettingsScreen() {
         title="Sign in to manage settings"
         description="Account settings require an authenticated session."
         icon={<User className="size-8" />}
+        imageKey="auth"
       />
     );
   }
@@ -49,6 +53,7 @@ export function SettingsScreen() {
         eyebrow="Account"
         title="Settings"
         description="Manage your profile, workspace, and security preferences."
+        imageKey="auth"
       />
 
       <div className="grid gap-6">

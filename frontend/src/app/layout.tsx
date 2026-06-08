@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
 
-import { ThemeProvider } from "@/components/common/theme/ThemeProvider";
-import { SentryInit } from "@/components/common/SentryInit";
+import { SentryInit } from "@/components/common/providers/SentryInit";
+import { ThemeProvider } from "@/components/common/providers/ThemeProvider";
 import { ToastProvider } from "@/components/ui/toast";
 import { StoreProvider } from "@/components/common/store/StoreProvider";
 

@@ -2,16 +2,9 @@ import type { FetchBaseQueryError } from "@reduxjs/toolkit/query";
 
 import { baseApi } from "@/components/common/store/baseApi";
 import { createClient } from "@/lib/supabase/client";
-import type { ClinicDocument, DocumentCategory, IngestionJob } from "./clinicDocsSlice";
+import type { ClinicDocument, DocumentCategory, DocumentChunk, IngestionJob } from "@/types/clinic-docs";
 
-export interface DocumentChunk {
-  id: string;
-  chunk_index: number;
-  content_payload: string;
-  category: string;
-  token_count: number;
-  similarity?: number;
-}
+export type { DocumentChunk };
 
 export const clinicDocsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({

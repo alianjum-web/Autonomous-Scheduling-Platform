@@ -1,4 +1,4 @@
-/** Cross-module type barrel — import domain types from their owning module. */
+/** Cross-module type barrel — domain types live here, not in store slices. */
 
 export type {
   AppointmentRow,
@@ -13,27 +13,19 @@ export type {
   SessionStatus,
 } from "@/types/database";
 
-export type { Appointment, Escalation, ViewMode } from "@/components/appointments/store/appointmentsSlice";
+export type { Appointment, Escalation, ViewMode } from "@/types/appointments";
 
 export type {
   ClinicDocument,
   DocumentCategory,
+  DocumentChunk,
   IngestionJob,
   UploadFormState,
   UploadProgress,
-} from "@/components/clinic-docs/store/clinicDocsSlice";
+} from "@/types/clinic-docs";
 
-export type { DocumentChunk } from "@/components/clinic-docs/store/clinicDocsApi";
+export type { AvailableSlot, BookingStep, SlotStatus } from "@/types/booking";
 
-export type {
-  AvailableSlot,
-  BookingStep,
-  SlotStatus,
-} from "@/components/patient-triage/store/bookingSlice";
-
-export type {
-  ChatMessage,
-  TriageStatus,
-} from "@/components/patient-triage/store/triageSlice";
+export type { ChatMessage, TriageStatus } from "@/types/triage";
 
 export type { AppDispatch, AppStore, RootState } from "@/components/common/store";

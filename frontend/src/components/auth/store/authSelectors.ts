@@ -1,7 +1,7 @@
 import { createSelector } from "@reduxjs/toolkit";
 import type { Session } from "@supabase/supabase-js";
 
-import type { RootState } from "./index";
+import type { RootState } from "@/components/common/store";
 
 import { ADMIN_ROLES } from "./authSlice";
 

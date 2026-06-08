@@ -1,13 +1,8 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
-export type TriageStatus = "idle" | "connecting" | "streaming" | "completed" | "error" | "reconnecting";
+import type { ChatMessage, TriageStatus } from "@/types/triage";
 
-export interface ChatMessage {
-  id: string;
-  role: "user" | "assistant" | "system";
-  content: string;
-  streaming?: boolean;
-}
+export type { ChatMessage, TriageStatus };
 
 export interface TriageState {
   messages: ChatMessage[];

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Bell, Search } from "lucide-react";
 
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
-import { ThemeToggle } from "@/components/common/theme/ThemeToggle";
+import { ThemeToggle } from "@/components/common/atoms/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 

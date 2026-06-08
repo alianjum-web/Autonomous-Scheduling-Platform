@@ -25,13 +25,15 @@ import { MiniBarChart } from "@/components/common/atoms/MiniBarChart";
 import { StatCard } from "@/components/common/atoms/StatCard";
 import { useAdminGuard } from "@/components/common/hooks/useAdminGuard";
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
-import { AccessGate, LoadingScreen, PageHeader, PageShell } from "@/components/common/layout/PageShell";
+import { LoadingScreen } from "@/components/common/atoms/LoadingScreen";
+import { PageShell } from "@/components/common/layout/PageShell";
+import { AccessGate } from "@/components/common/molecules/AccessGate";
+import { PageHeader } from "@/components/common/molecules/PageHeader";
 import { useReduxForm } from "@/components/common/hooks/useReduxForm";
 import { useAppDispatch, useAppSelector } from "@/components/common/store/hooks";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { IMAGES } from "@/lib/constants/images";
 
 interface DateFilterForm {
   selectedDate: string;
@@ -64,6 +66,7 @@ export function AppointmentsDashboard() {
         title="Sign in to view appointments"
         description="The appointments dashboard requires an authenticated staff session with clinic admin privileges."
         icon={<CalendarDays className="size-8" />}
+        imageKey="appointments"
         requireAdmin
       />
     );
@@ -74,6 +77,7 @@ export function AppointmentsDashboard() {
         title="Admin access required"
         description="Your account is signed in but lacks the clinic_admin role. Contact your administrator to update Supabase app metadata."
         icon={<CalendarDays className="size-8" />}
+        imageKey="appointments"
         requireAdmin
       />
     );
@@ -135,8 +139,7 @@ export function AppointmentsDashboard() {
         eyebrow="Schedule"
         title="Appointments Dashboard"
         description="Day and week views with real-time sync and distributed slot locking."
-        image={IMAGES.appointments}
-        imageAlt="Modern clinic reception"
+        imageKey="appointments"
         actions={
           <>
             <Form {...form}>

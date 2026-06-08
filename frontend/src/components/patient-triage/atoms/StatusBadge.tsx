@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import type { TriageStatus } from "@/components/patient-triage/store/triageSlice";
+import type { TriageStatus } from "@/types/triage";
 
 const STATUS_LABELS: Record<TriageStatus, string> = {
   idle: "Ready",

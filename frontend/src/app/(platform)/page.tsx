@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -10,9 +9,10 @@ import {
   Users,
 } from "lucide-react";
 
+import { ClinicalImage } from "@/components/common/atoms/ClinicalImage";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { IMAGES } from "@/lib/constants/images";
+import type { ImageAssetKey } from "@/lib/constants/images";
 import { pageMetadata } from "@/lib/metadata";
 
 export const metadata = pageMetadata(
@@ -20,14 +20,20 @@ export const metadata = pageMetadata(
   "AI-first patient intake and autonomous scheduling for high-trust medical and dental clinics.",
 );
 
-const FEATURES = [
+const FEATURES: {
+  title: string;
+  description: string;
+  href: string;
+  icon: typeof Bot;
+  imageKey: ImageAssetKey;
+}[] = [
   {
     title: "AI Patient Intake",
     description:
       "Streaming chat triage with emergency keyword detection and warm, clinic-aware responses powered by LangGraph.",
     href: "/chat",
     icon: Bot,
-    image: IMAGES.chat,
+    imageKey: "chat",
   },
   {
     title: "Front Desk Workspace",
@@ -35,7 +41,7 @@ const FEATURES = [
       "Real-time escalation queue and live calendar view — staff see urgent cases the moment AI flags them.",
     href: "/front-desk",
     icon: Users,
-    image: IMAGES.frontDesk,
+    imageKey: "frontDesk",
   },
   {
     title: "Appointments Dashboard",
@@ -43,7 +49,7 @@ const FEATURES = [
       "Day and week views with distributed Redis slot locks preventing double-booking across sessions.",
     href: "/appointments",
     icon: CalendarCheck,
-    image: IMAGES.appointments,
+    imageKey: "appointments",
   },
   {
     title: "Clinic Documents RAG",
@@ -51,9 +57,30 @@ const FEATURES = [
       "Upload protocols, pricing, and FAQs — embedded into pgvector for grounded patient answers.",
     href: "/clinic-docs",
     icon: FileSearch,
-    image: IMAGES.docs,
+    imageKey: "docs",
   },
-] as const;
+];
+
+const HOW_IT_WORKS: { step: string; title: string; body: string; imageKey: ImageAssetKey }[] = [
+  {
+    step: "01",
+    title: "Patient chats",
+    body: "Streaming SSE intake collects symptoms, answers from clinic RAG, and surfaces available slots.",
+    imageKey: "chat",
+  },
+  {
+    step: "02",
+    title: "AI schedules",
+    body: "LangGraph agent books appointments with Redis distributed locks — no double-booking.",
+    imageKey: "appointments",
+  },
+  {
+    step: "03",
+    title: "Staff escalates",
+    body: "Front desk receives real-time alerts for emergencies and human handoffs via Supabase Realtime.",
+    imageKey: "frontDesk",
+  },
+];
 
 const TRUST_BADGES = [
   "HIPAA-aware architecture",
@@ -65,7 +92,6 @@ const TRUST_BADGES = [
 export default function HomePage() {
   return (
     <div className="flex flex-1 flex-col">
-      {/* Hero */}
       <section className="page-gradient relative overflow-hidden border-b border-border/60">
         <div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:items-center lg:py-24">
           <div className="space-y-8">
@@ -74,11 +100,10 @@ export default function HomePage() {
               AI-first clinical scheduling
             </div>
             <div className="space-y-4">
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-[3.25rem] lg:leading-[1.1]">
-              Welcome to{" "}
-              <span className="text-gradient">Symptra</span> — AI scheduling that
-              feels premium
-            </h1>
+              <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-[3.25rem] lg:leading-[1.1]">
+                Welcome to <span className="text-gradient">Symptra</span> — AI scheduling that feels
+                premium
+              </h1>
               <p className="max-w-xl text-lg leading-relaxed text-muted-foreground">
                 High-trust medical and dental clinics use our platform for streaming AI triage,
                 autonomous booking, and real-time staff handoffs — all tenant-isolated and
@@ -111,14 +136,7 @@ export default function HomePage() {
 
           <div className="relative mx-auto w-full max-w-lg lg:max-w-none">
             <div className="hero-glow relative aspect-[4/3] overflow-hidden rounded-2xl border border-border/60">
-              <Image
-                src={IMAGES.hero}
-                alt="Clinical team providing patient care"
-                fill
-                className="object-cover"
-                priority
-                sizes="(max-width: 1024px) 100vw, 50vw"
-              />
+              <ClinicalImage asset="hero" variant="hero" priority />
               <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
               <div className="absolute bottom-4 left-4 right-4 glass-panel p-4">
                 <p className="text-sm font-medium">Live triage session</p>
@@ -131,7 +149,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Features */}
       <section className="mesh-bg py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="mx-auto max-w-2xl text-center">
@@ -142,16 +159,14 @@ export default function HomePage() {
             </p>
           </div>
           <div className="mt-12 grid gap-6 sm:grid-cols-2">
-            {FEATURES.map(({ title, description, href, icon: Icon, image }) => (
+            {FEATURES.map(({ title, description, href, icon: Icon, imageKey }) => (
               <Link key={href} href={href} className="group block">
                 <Card className="dashboard-card-hover h-full overflow-hidden">
-                  <div className="relative h-40 overflow-hidden">
-                    <Image
-                      src={image}
-                      alt=""
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
-                      sizes="(max-width: 640px) 100vw, 50vw"
+                  <div className="relative h-44 overflow-hidden sm:h-40">
+                    <ClinicalImage
+                      asset={imageKey}
+                      variant="card"
+                      className="transition-transform duration-500 group-hover:scale-105"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-card via-card/20 to-transparent" />
                     <div className="absolute bottom-4 left-4 flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md">
@@ -172,40 +187,59 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* How it works */}
       <section className="border-y border-border/60 bg-card/30 py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <h2 className="text-center text-3xl font-semibold tracking-tight">How it works</h2>
           <div className="mt-12 grid gap-8 md:grid-cols-3">
-            {[
-              {
-                step: "01",
-                title: "Patient chats",
-                body: "Streaming SSE intake collects symptoms, answers from clinic RAG, and surfaces available slots.",
-              },
-              {
-                step: "02",
-                title: "AI schedules",
-                body: "LangGraph agent books appointments with Redis distributed locks — no double-booking.",
-              },
-              {
-                step: "03",
-                title: "Staff escalates",
-                body: "Front desk receives real-time alerts for emergencies and human handoffs via Supabase Realtime.",
-              },
-            ].map(({ step, title, body }) => (
-              <div key={step} className="relative space-y-3 rounded-2xl border border-border/70 bg-background p-6 shadow-sm">
-                <span className="text-4xl font-bold text-primary/20">{step}</span>
-                <h3 className="text-lg font-semibold">{title}</h3>
-                <p className="text-sm leading-relaxed text-muted-foreground">{body}</p>
+            {HOW_IT_WORKS.map(({ step, title, body, imageKey }) => (
+              <div
+                key={step}
+                className="relative overflow-hidden rounded-2xl border border-border/70 bg-background shadow-sm"
+              >
+                <div className="relative h-36">
+                  <ClinicalImage asset={imageKey} variant="thumb" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+                </div>
+                <div className="space-y-3 p-6">
+                  <span className="text-4xl font-bold text-primary/20">{step}</span>
+                  <h3 className="text-lg font-semibold">{title}</h3>
+                  <p className="text-sm leading-relaxed text-muted-foreground">{body}</p>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA */}
       <section className="py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          <div className="relative overflow-hidden rounded-2xl border border-border/70">
+            <div className="relative aspect-[3/1] max-h-72 w-full sm:max-h-80">
+              <ClinicalImage asset="team" variant="banner" />
+              <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/70 to-background/30" />
+            </div>
+            <div className="absolute inset-0 flex flex-col justify-center px-6 sm:px-10 lg:px-14">
+              <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+                Built for clinical teams
+              </p>
+              <h2 className="mt-2 max-w-xl text-2xl font-semibold tracking-tight sm:text-3xl">
+                Your staff stays in the loop — from intake to escalation
+              </h2>
+              <p className="mt-3 max-w-lg text-sm leading-relaxed text-muted-foreground sm:text-base">
+                Front desk, providers, and admins share one real-time workspace with tenant-isolated
+                data and role-based access.
+              </p>
+              <div className="mt-6">
+                <Button asChild size="lg" className="shadow-md">
+                  <Link href="/sign-up">Onboard your clinic</Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="pb-20">
         <div className="mx-auto max-w-4xl px-4 sm:px-6">
           <Card className="hero-glow overflow-hidden border-primary/20 bg-gradient-to-br from-primary/5 via-card to-accent/30">
             <CardContent className="flex flex-col items-center gap-6 p-10 text-center sm:p-14">
@@ -213,8 +247,8 @@ export default function HomePage() {
                 Ready to transform patient intake?
               </h2>
               <p className="max-w-lg text-muted-foreground">
-                Create an account or sign in with your clinic credentials to access the full
-                platform — chat, scheduling, documents, and front-desk tools.
+                Create an account or sign in with your clinic credentials to access the full platform
+                — chat, scheduling, documents, and front-desk tools.
               </p>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <Button asChild size="lg" className="h-12 px-8 shadow-md">

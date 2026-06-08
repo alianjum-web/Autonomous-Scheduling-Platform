@@ -2,8 +2,8 @@
 
 import { useCallback } from "react";
 
-import { selectAccessToken, selectAuthLoading, selectAuthSession, selectTenantId } from "@/components/common/store/authSelectors";
-import { setSession } from "@/components/common/store/authSlice";
+import { selectAccessToken, selectAuthLoading, selectAuthSession, selectTenantId } from "@/components/auth/store/authSelectors";
+import { setSession } from "@/components/auth/store/authSlice";
 import { useAppDispatch, useAppSelector } from "@/components/common/store/hooks";
 import { createClient } from "@/lib/supabase/client";
 

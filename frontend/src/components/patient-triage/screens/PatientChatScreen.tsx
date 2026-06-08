@@ -5,11 +5,11 @@ import { useSearchParams } from "next/navigation";
 import { Bot, Lock } from "lucide-react";
 
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
-import { PageHeader, PageShell } from "@/components/common/layout/PageShell";
+import { PageShell } from "@/components/common/layout/PageShell";
+import { PageHeader } from "@/components/common/molecules/PageHeader";
 import { LiveChatPanel } from "@/components/patient-triage/organisms/LiveChatPanel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { IMAGES } from "@/lib/constants/images";
 
 export function PatientChatScreen() {
   const searchParams = useSearchParams();
@@ -22,8 +22,7 @@ export function PatientChatScreen() {
         eyebrow="Patient intake"
         title="AI Triage Chat"
         description="Describe your symptoms or scheduling needs. Our assistant uses your clinic's knowledge base and live availability to help you book the right appointment."
-        image={IMAGES.chat}
-        imageAlt="Patient speaking with healthcare provider"
+        imageKey="chat"
       />
 
       {staffNotice ? (

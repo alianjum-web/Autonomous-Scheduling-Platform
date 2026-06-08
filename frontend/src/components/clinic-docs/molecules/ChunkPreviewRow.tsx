@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import type { DocumentChunk } from "@/components/clinic-docs/store/clinicDocsApi";
+import type { DocumentChunk } from "@/types/clinic-docs";
 
 interface ChunkPreviewRowProps {
   chunk: DocumentChunk;

@@ -8,7 +8,7 @@ import {
   useCancelAppointmentMutation,
   useUpdateAppointmentStatusMutation,
 } from "@/components/appointments/store/appointmentsApi";
-import type { Appointment, AppointmentStatus } from "@/components/appointments/store/appointmentsSlice";
+import type { Appointment, AppointmentStatus } from "@/types/appointments";
 
 interface AppointmentDetailPanelProps {
   appointment: Appointment | null;

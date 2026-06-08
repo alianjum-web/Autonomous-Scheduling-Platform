@@ -5,11 +5,11 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Mail, RefreshCw } from "lucide-react";
 
-import { AuthLayout } from "@/components/common/layout/AuthLayout";
+import { AuthLayout } from "@/components/auth/layout/AuthLayout";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 
-export function VerifyEmailForm() {
+export function VerifyEmailScreen() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email") ?? "";
   const [message, setMessage] = useState<string | null>(null);

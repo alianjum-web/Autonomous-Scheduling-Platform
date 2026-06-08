@@ -2,7 +2,8 @@
 
 import { Activity, CheckCircle2, Database, RefreshCw, Server, XCircle } from "lucide-react";
 
-import { PageHeader, PageShell } from "@/components/common/layout/PageShell";
+import { PageShell } from "@/components/common/layout/PageShell";
+import { PageHeader } from "@/components/common/molecules/PageHeader";
 import { useGetHealthQuery } from "@/components/common/store/healthApi";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,6 +49,7 @@ export function StatusScreen() {
         eyebrow="Operations"
         title="System Status"
         description="Live health checks for the FastAPI gateway, database, Redis, and OpenAI connectivity."
+        imageKey="hero"
         actions={
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={loading} className="gap-1.5">
             <RefreshCw className={cn("size-4", loading && "animate-spin")} aria-hidden />

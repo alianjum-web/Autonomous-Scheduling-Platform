@@ -1,14 +1,8 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
-export type BookingStep = "idle" | "select" | "confirm" | "complete";
+import type { AvailableSlot, BookingStep, SlotStatus } from "@/types/booking";
 
-export type SlotStatus = "available" | "reserving" | "confirmed" | "unavailable";
-
-export interface AvailableSlot {
-  iso: string;
-  label: string;
-  status: SlotStatus;
-}
+export type { AvailableSlot, BookingStep, SlotStatus };
 
 export interface BookingState {
   availableSlots: AvailableSlot[];

@@ -15,8 +15,8 @@ import {
 } from "lucide-react";
 
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
-import { SiteFooter } from "@/components/common/SiteFooter";
-import { ThemeToggle } from "@/components/common/theme/ThemeToggle";
+import { ThemeToggle } from "@/components/common/atoms/ThemeToggle";
+import { SiteFooter } from "@/components/common/organisms/SiteFooter";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";

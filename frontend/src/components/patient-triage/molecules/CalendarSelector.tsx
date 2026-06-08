@@ -2,7 +2,7 @@
 
 import { TimeSlotChip } from "@/components/patient-triage/atoms/TimeSlotChip";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { AvailableSlot } from "@/components/patient-triage/store/bookingSlice";
+import type { AvailableSlot } from "@/types/booking";
 
 interface CalendarSelectorProps {
   slots: AvailableSlot[];

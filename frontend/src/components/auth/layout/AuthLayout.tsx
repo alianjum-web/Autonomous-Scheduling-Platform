@@ -1,10 +1,9 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Stethoscope } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { ThemeToggle } from "@/components/common/theme/ThemeToggle";
-import { IMAGES } from "@/lib/constants/images";
+import { ClinicalImage } from "@/components/common/atoms/ClinicalImage";
+import { ThemeToggle } from "@/components/common/atoms/ThemeToggle";
 
 interface AuthLayoutProps {
   children: ReactNode;
@@ -16,14 +15,7 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
   return (
     <div className="flex min-h-screen flex-col bg-background lg:flex-row">
       <div className="relative hidden w-full flex-col justify-between overflow-hidden p-10 text-primary-foreground lg:flex lg:w-[44%] xl:w-[42%]">
-        <Image
-          src={IMAGES.auth}
-          alt=""
-          fill
-          className="object-cover opacity-20"
-          priority
-          sizes="50vw"
-        />
+        <ClinicalImage asset="auth" variant="auth" fillParent className="opacity-20" priority />
         <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/90 to-info/80" />
         <div className="relative z-10">
           <Link href="/" className="inline-flex items-center gap-3 text-lg font-bold">
