@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import type { ApiErrorBody, IngestUploadResponse } from "@/types/api";
-import { isApiErrorBody } from "@/types/api";
+import type { ApiErrorBody } from "@/types/api";
+import { isApiErrorBody, isIngestUploadResponse } from "@/types/api";
+import type { IngestUploadResponse } from "@/types/ingest";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
@@ -51,7 +52,10 @@ export async function POST(request: NextRequest) {
 
   const body: unknown = await res.json().catch(() => ({ detail: res.statusText }));
   if (res.ok) {
-    return NextResponse.json(body as IngestUploadResponse, { status: res.status });
+    if (!isIngestUploadResponse(body)) {
+      return NextResponse.json({ detail: "Invalid upstream response" }, { status: 502 });
+    }
+    return NextResponse.json(body satisfies IngestUploadResponse, { status: res.status });
   }
   const error: ApiErrorBody = isApiErrorBody(body)
     ? body

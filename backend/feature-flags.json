@@ -1,0 +1,39 @@
+{
+  "$comment": "Edit chat_provider / embedding_provider to switch AI backends without code changes. hot_reload picks up edits on the next request.",
+  "version": 1,
+  "hot_reload": true,
+  "features": {
+    "ai": {
+      "chat_provider": "ollama",
+      "embedding_provider": "ollama"
+    },
+    "triage": {
+      "streaming_enabled": true,
+      "intent_classifier_enabled": true
+    },
+    "compliance": {
+      "baa_enforcement": false
+    }
+  },
+  "providers": {
+    "ollama": {
+      "enabled": true,
+      "chat_model": "llama3.2",
+      "embedding_model": "nomic-embed-text"
+    },
+    "openai": {
+      "enabled": true,
+      "chat_model": "gpt-4o-mini",
+      "embedding_model": "text-embedding-3-small"
+    },
+    "gemini": {
+      "enabled": true,
+      "chat_model": "gemini-2.0-flash",
+      "embedding_model": "text-embedding-004"
+    },
+    "grok": {
+      "enabled": true,
+      "chat_model": "grok-2-latest"
+    }
+  }
+}

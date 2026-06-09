@@ -6,8 +6,9 @@ import { selectAccessToken, selectAuthLoading, selectAuthSession, selectTenantId
 import { setSession } from "@/components/auth/store/authSlice";
 import { useAppDispatch, useAppSelector } from "@/components/common/store/hooks";
 import { createClient } from "@/lib/supabase/client";
+import type { UseAuthSessionReturn } from "@/types/hooks";
 
-export function useAuthSession() {
+export function useAuthSession(): UseAuthSessionReturn {
   const dispatch = useAppDispatch();
   const session = useAppSelector(selectAuthSession);
   const loading = useAppSelector(selectAuthLoading);

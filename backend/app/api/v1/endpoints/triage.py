@@ -13,6 +13,7 @@ from app.schemas.triage import (
     TriageMessageRequest,
 )
 from app.services import triage_service
+from app.services.compliance import require_tenant_baa
 from app.services.triage_service import RateLimitExceededError, TriageConnection
 
 router = APIRouter(prefix="/triage", tags=["triage"])
@@ -23,6 +24,7 @@ async def create_session(
     body: CreateSessionRequest,
     tenant_id: str = Depends(get_tenant_id),
 ) -> CreateSessionResponse:
+    await require_tenant_baa(tenant_id)
     return await triage_service.create_session(tenant_id, body.metadata)
 
 
@@ -43,6 +45,7 @@ async def send_triage_message(
     request: Request,
     tenant_id: str = Depends(get_tenant_id),
 ):
+    await require_tenant_baa(tenant_id)
     history = await triage_service.prepare_message_turn(session_id, tenant_id, body)
     stream = triage_service.stream_message_sse(session_id, tenant_id, body.message, history)
     return sse_response(request, stream)

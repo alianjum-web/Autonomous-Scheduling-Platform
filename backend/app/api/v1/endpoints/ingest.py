@@ -4,6 +4,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, UploadFile
 
 from app.core.config import Settings, get_settings
 from app.core.security import get_tenant_id, get_user_id, require_admin
+from app.services.compliance import require_tenant_baa
 from app.schemas.ingest import (
     DeleteDocumentResponse,
     DocumentChunksResponse,
@@ -44,6 +45,7 @@ async def upload_document(
     _admin: dict = Depends(require_admin),
     settings: Settings = Depends(get_settings),
 ) -> UploadDocumentResponse:
+    await require_tenant_baa(tenant_id)
     file_bytes = await file.read()
     job = await ingestion_service.start_document_upload(
         tenant_id,

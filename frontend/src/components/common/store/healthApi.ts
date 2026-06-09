@@ -1,23 +1,23 @@
 import { baseApi } from "./baseApi";
+import type { AIStatusResponse, HealthResponse } from "@/types/health";
 
-export interface HealthChecks {
-  database: boolean;
-  redis: boolean;
-  openai: boolean;
-  openai_latency_ms: number | null;
-}
-
-export interface HealthResponse {
-  status: string;
-  checks: HealthChecks;
-}
+export type {
+  AIProviderStatus,
+  AIStatusResponse,
+  HealthChecks,
+  HealthResponse,
+  PlatformHealthStatus,
+} from "@/types/health";
 
 export const healthApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getHealth: builder.query<HealthResponse, void>({
       query: () => "/health",
     }),
+    getAIStatus: builder.query<AIStatusResponse, void>({
+      query: () => "/v1/ai/status",
+    }),
   }),
 });
 
-export const { useGetHealthQuery } = healthApi;
+export const { useGetHealthQuery, useGetAIStatusQuery } = healthApi;

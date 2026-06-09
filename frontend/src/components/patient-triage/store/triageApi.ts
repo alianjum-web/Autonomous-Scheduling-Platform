@@ -1,21 +1,21 @@
 import { baseApi } from "@/components/common/store/baseApi";
+import type {
+  CreateTriageSessionRequest,
+  CreateTriageSessionResponse,
+  EscalateSessionRequest,
+  EscalateSessionResponse,
+} from "@/types/triage";
 
 export const triageApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    createTriageSession: builder.mutation<
-      { session_id: string; status: string },
-      { metadata?: Record<string, unknown> }
-    >({
+    createTriageSession: builder.mutation<CreateTriageSessionResponse, CreateTriageSessionRequest>({
       query: (body) => ({
         url: "/v1/triage/session",
         method: "POST",
         body,
       }),
     }),
-    escalateSession: builder.mutation<
-      { session_id: string; status: string },
-      { sessionId: string; patient_name?: string; ai_summary?: string }
-    >({
+    escalateSession: builder.mutation<EscalateSessionResponse, EscalateSessionRequest>({
       query: ({ sessionId, ...body }) => ({
         url: `/v1/triage/escalate/${sessionId}`,
         method: "POST",

@@ -23,8 +23,9 @@ import {
   setSlotStatus,
 } from "@/components/patient-triage/store/bookingSlice";
 import { useAppDispatch, useAppSelector } from "@/components/common/store/hooks";
+import type { UseBookingFlowReturn } from "@/types/hooks";
 
-export function useBookingFlow(sessionId: string | null) {
+export function useBookingFlow(sessionId: string | null): UseBookingFlowReturn {
   const dispatch = useAppDispatch();
   const availableSlots = useAppSelector(selectAvailableSlots);
   const selectedSlot = useAppSelector(selectSelectedSlot);
@@ -67,7 +68,7 @@ export function useBookingFlow(sessionId: string | null) {
       dispatch(setSlotStatus({ slot: selectedSlot, status: "confirmed" }));
       dispatch(
         setBookingConfirmed({
-          code: result.confirmation_code ?? result.appointment?.confirmation_code,
+          code: result.confirmation_code,
           slot: selectedSlot,
         }),
       );

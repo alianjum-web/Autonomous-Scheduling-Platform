@@ -2,6 +2,7 @@ import { createSelector } from "@reduxjs/toolkit";
 import type { Session } from "@supabase/supabase-js";
 
 import type { RootState } from "@/components/common/store";
+import type { ClinicRole } from "@/types/auth";
 
 import { ADMIN_ROLES } from "./authSlice";
 
@@ -11,7 +12,7 @@ export const selectAuthLoading = (state: RootState) => state.auth.loading;
 export const selectAuthInitialized = (state: RootState) => state.auth.initialized;
 export const selectAccessToken = (state: RootState) => state.auth.accessToken;
 export const selectTenantId = (state: RootState) => state.auth.tenantId;
-export const selectClinicRole = (state: RootState) => state.auth.clinicRole;
+export const selectClinicRole = (state: RootState): ClinicRole | null => state.auth.clinicRole;
 export const selectIsAuthenticated = (state: RootState) => Boolean(state.auth.userId);
 
 export const selectIsAdmin = createSelector([selectClinicRole], (role) =>

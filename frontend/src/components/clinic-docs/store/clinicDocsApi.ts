@@ -2,20 +2,27 @@ import type { FetchBaseQueryError } from "@reduxjs/toolkit/query";
 
 import { baseApi } from "@/components/common/store/baseApi";
 import { createClient } from "@/lib/supabase/client";
+import { isIngestUploadResponse } from "@/types/api";
 import type { ClinicDocument, DocumentCategory, DocumentChunk, IngestionJob } from "@/types/clinic-docs";
+import type {
+  DeleteDocumentResponse,
+  DocumentChunksResponse,
+  DocumentListResponse,
+  IngestUploadResponse,
+} from "@/types/ingest";
 
 export type { DocumentChunk };
 
 export const clinicDocsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getDocuments: builder.query<{ documents: ClinicDocument[] }, void>({
+    getDocuments: builder.query<DocumentListResponse, void>({
       query: () => "/v1/ingest/documents",
       providesTags: ["Documents"],
     }),
-    getDocumentChunks: builder.query<{ chunks: DocumentChunk[] }, string>({
+    getDocumentChunks: builder.query<DocumentChunksResponse, string>({
       query: (documentId) => `/v1/ingest/documents/${documentId}/chunks`,
     }),
-    deleteDocument: builder.mutation<{ deleted: string }, string>({
+    deleteDocument: builder.mutation<DeleteDocumentResponse, string>({
       query: (documentId) => ({
         url: `/v1/ingest/document/${documentId}`,
         method: "DELETE",
@@ -27,7 +34,7 @@ export const clinicDocsApi = baseApi.injectEndpoints({
       providesTags: (_result, _err, jobId) => [{ type: "IngestionJob", id: jobId }],
     }),
     uploadDocument: builder.mutation<
-      { job_id: string; status: string; filename: string },
+      IngestUploadResponse,
       { file: File; category: DocumentCategory }
     >({
       queryFn: async ({ file, category }) => {
@@ -35,7 +42,9 @@ export const clinicDocsApi = baseApi.injectEndpoints({
         const { data: sessionData } = await supabase.auth.getSession();
         const token = sessionData.session?.access_token;
         if (!token) {
-          return { error: { status: 401, data: { detail: "Not authenticated" } } as FetchBaseQueryError };
+          return {
+            error: { status: 401, data: { detail: "Not authenticated" } } satisfies FetchBaseQueryError,
+          };
         }
 
         const formData = new FormData();
@@ -49,11 +58,19 @@ export const clinicDocsApi = baseApi.injectEndpoints({
         });
 
         if (!res.ok) {
-          const err = await res.json().catch(() => ({ detail: res.statusText }));
-          return { error: { status: res.status, data: err } as FetchBaseQueryError };
+          const err: unknown = await res.json().catch(() => ({ detail: res.statusText }));
+          return { error: { status: res.status, data: err } satisfies FetchBaseQueryError };
         }
 
-        const result = (await res.json()) as { job_id: string; status: string; filename: string };
+        const result: unknown = await res.json();
+        if (!isIngestUploadResponse(result)) {
+          return {
+            error: {
+              status: 502,
+              data: { detail: "Invalid ingest response shape" },
+            } satisfies FetchBaseQueryError,
+          };
+        }
         return { data: result };
       },
       invalidatesTags: ["Documents"],
@@ -68,3 +85,5 @@ export const {
   useGetIngestionStatusQuery,
   useUploadDocumentMutation,
 } = clinicDocsApi;
+
+export type { ClinicDocument, IngestionJob, IngestUploadResponse };

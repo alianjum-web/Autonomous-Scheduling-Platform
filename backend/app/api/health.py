@@ -2,8 +2,9 @@ import time
 
 from fastapi import APIRouter
 
-from app.adapters.openai_client import get_openai_client_optional
+from app.adapters.llm import is_chat_available, probe_provider
 from app.adapters.redis_client import ping_redis
+from app.core.feature_flags import get_chat_provider, get_feature_flags
 from app.schemas.health import HealthChecks, HealthResponse
 from app.services.supabase_client import ping_supabase
 
@@ -21,16 +22,23 @@ async def health_check() -> HealthResponse:
     db_ok = await ping_supabase()
     redis_ok = await ping_redis()
 
-    openai_latency_ms: float | None = None
-    openai_ok = True
-    client = get_openai_client_optional()
-    if client:
+    ai_latency_ms: float | None = None
+    ai_ok = True
+    ai_provider: str | None = None
+
+    if is_chat_available():
+        flags = get_feature_flags()
+        ai_provider = flags.features.ai.chat_provider
         start = time.perf_counter()
         try:
-            await client.models.list()
-            openai_latency_ms = round((time.perf_counter() - start) * 1000, 1)
+            probe = await probe_provider(get_chat_provider())
+            ai_ok = probe.ok
+            ai_latency_ms = probe.latency_ms
         except Exception:
-            openai_ok = False
+            ai_ok = False
+            ai_latency_ms = round((time.perf_counter() - start) * 1000, 1)
+    else:
+        ai_ok = False
 
     status = "healthy" if db_ok and redis_ok else "degraded"
     return HealthResponse(
@@ -38,8 +46,11 @@ async def health_check() -> HealthResponse:
         checks=HealthChecks(
             database=db_ok,
             redis=redis_ok,
-            openai=openai_ok,
-            openai_latency_ms=openai_latency_ms,
+            ai=ai_ok,
+            ai_provider=ai_provider,
+            ai_latency_ms=ai_latency_ms,
+            openai=ai_ok,
+            openai_latency_ms=ai_latency_ms,
         ),
     )
 

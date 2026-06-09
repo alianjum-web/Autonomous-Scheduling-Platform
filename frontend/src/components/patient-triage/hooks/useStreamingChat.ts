@@ -6,8 +6,14 @@ import { EventSourcePolyfill } from "event-source-polyfill";
 import { addEscalation } from "@/components/appointments/store/appointmentsSlice";
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
 import { useAppDispatch, useAppSelector } from "@/components/common/store/hooks";
+import {
+  classifySseDataLine,
+  extractBaaRequiredMessage,
+  parseTriageStreamMeta,
+  parseTriageWebSocketFrame,
+} from "@/lib/api/parsers";
 import { showToast } from "@/components/ui/toast";
-import { setAvailableSlots } from "@/components/patient-triage/store/bookingSlice";
+import { setAvailableSlots, setBookingConfirmed } from "@/components/patient-triage/store/bookingSlice";
 import { useCreateTriageSessionMutation } from "@/components/patient-triage/store/triageApi";
 import {
   selectTriageMessages,
@@ -22,6 +28,9 @@ import {
   setStatus,
   startAssistantMessage,
 } from "@/components/patient-triage/store/triageSlice";
+import type { DbChatMessage } from "@/types";
+import type { UseStreamingChatReturn } from "@/types/hooks";
+import type { TriageWebSocketOutbound } from "@/types/triage";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const USE_WEBSOCKET = process.env.NEXT_PUBLIC_USE_TRIAGE_WS === "1";
@@ -44,7 +53,7 @@ async function* readSseStream(response: Response): AsyncGenerator<string> {
   }
 }
 
-export function useStreamingChat() {
+export function useStreamingChat(): UseStreamingChatReturn {
   const dispatch = useAppDispatch();
   const { accessToken, refreshSession } = useAuthSession();
   const [createSession] = useCreateTriageSessionMutation();
@@ -63,55 +72,68 @@ export function useStreamingChat() {
     abortRef.current = null;
   }, []);
 
-  const handleStreamData = useCallback(
-    (data: string, activeSessionId: string | null) => {
-      if (data === "[DONE]") {
-        dispatch(finishAssistantMessage());
-        return "done";
+  const applyStreamMeta = useCallback(
+    (metaJson: string, activeSessionId: string | null) => {
+      const meta = parseTriageStreamMeta(metaJson);
+      if (!meta) return;
+
+      if (meta.available_slots.length) {
+        dispatch(setAvailableSlots(meta.available_slots));
       }
-      if (data.startsWith("[META]")) {
-        try {
-          const meta = JSON.parse(data.slice(6)) as {
-            available_slots?: string[];
-            should_escalate?: boolean;
-            is_emergency?: boolean;
-            intent?: string;
-          };
-          if (meta.available_slots?.length) {
-            dispatch(setAvailableSlots(meta.available_slots));
-          }
-          if (meta.is_emergency) {
-            dispatch(setEmergencyDetected(true));
-            showToast({
-              title: "Emergency Detected",
-              description: "Call 911 immediately. This AI cannot provide medical advice.",
-              variant: "destructive",
-            });
-          }
-          if (meta.should_escalate && activeSessionId) {
-            dispatch(
-              addEscalation({
-                id: activeSessionId,
-                tenant_id: "",
-                current_triage_status: "escalated_to_human",
-                status: "active",
-              }),
-            );
-            showToast({
-              title: "Escalation Triggered",
-              description: "Connecting patient with care coordinator.",
-              variant: "destructive",
-            });
-          }
-        } catch {
-          /* ignore malformed meta */
-        }
-        return "meta";
+      if (meta.booking_confirmed && meta.confirmation_code && meta.booked_slot) {
+        dispatch(
+          setBookingConfirmed({
+            code: meta.confirmation_code,
+            slot: meta.booked_slot,
+          }),
+        );
+        showToast({
+          title: "Appointment confirmed",
+          description: `Confirmation code: ${meta.confirmation_code}`,
+        });
       }
-      dispatch(appendToken(data));
-      return "token";
+      if (meta.is_emergency) {
+        dispatch(setEmergencyDetected(true));
+        showToast({
+          title: "Emergency Detected",
+          description: "Call 911 immediately. This AI cannot provide medical advice.",
+          variant: "destructive",
+        });
+      }
+      if (meta.should_escalate && activeSessionId) {
+        dispatch(
+          addEscalation({
+            id: activeSessionId,
+            tenant_id: "",
+            current_triage_status: "escalated_to_human",
+            status: "active",
+          }),
+        );
+        showToast({
+          title: "Escalation Triggered",
+          description: "Connecting patient with care coordinator.",
+          variant: "destructive",
+        });
+      }
     },
     [dispatch],
+  );
+
+  const handleStreamData = useCallback(
+    (data: string, activeSessionId: string | null) => {
+      const kind = classifySseDataLine(data);
+      if (kind === "done") {
+        dispatch(finishAssistantMessage());
+        return kind;
+      }
+      if (kind === "meta") {
+        applyStreamMeta(data.slice(6), activeSessionId);
+        return kind;
+      }
+      dispatch(appendToken(data));
+      return kind;
+    },
+    [applyStreamMeta, dispatch],
   );
 
   const streamViaFetch = useCallback(
@@ -119,7 +141,10 @@ export function useStreamingChat() {
       abortRef.current = new AbortController();
       dispatch(startAssistantMessage());
 
-      const history = messages.map((m) => ({ role: m.role, content: m.content }));
+      const history: DbChatMessage[] = messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
       const response = await fetch(`${API_BASE}/v1/triage/message/${id}`, {
         method: "POST",
         headers: {
@@ -132,6 +157,14 @@ export function useStreamingChat() {
       });
 
       if (!response.ok) {
+        if (response.status === 403) {
+          const body: unknown = await response.json().catch(() => null);
+          const baaMessage = extractBaaRequiredMessage(body);
+          if (baaMessage) {
+            dispatch(setError(baaMessage));
+            return;
+          }
+        }
         throw new Error(`Stream failed: ${response.status}`);
       }
 
@@ -153,15 +186,20 @@ export function useStreamingChat() {
         dispatch(startAssistantMessage());
 
         ws.onopen = () => {
-          ws.send(JSON.stringify({
+          const payload: TriageWebSocketOutbound = {
             message,
             history: messages.map((m) => ({ role: m.role, content: m.content })),
             authorization: `Bearer ${token}`,
-          }));
+          };
+          ws.send(JSON.stringify(payload));
         };
 
         ws.onmessage = (event) => {
-          const payload = JSON.parse(event.data as string) as { token?: string; done?: boolean; error?: string };
+          const payload = parseTriageWebSocketFrame(String(event.data));
+          if (!payload) {
+            reject(new Error("Invalid WebSocket frame"));
+            return;
+          }
           if (payload.error) {
             reject(new Error(payload.error));
             return;
@@ -171,13 +209,16 @@ export function useStreamingChat() {
             resolve();
             return;
           }
+          if (payload.meta) {
+            applyStreamMeta(JSON.stringify(payload.meta), id);
+          }
           if (payload.token) dispatch(appendToken(payload.token));
         };
 
         ws.onerror = () => reject(new Error("WebSocket error"));
       });
     },
-    [dispatch, messages],
+    [applyStreamMeta, dispatch, messages],
   );
 
   const sendMessage = useCallback(

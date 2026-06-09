@@ -34,10 +34,23 @@ class Settings(BaseSettings):
     def effective_redis_url(self) -> str:
         return self.upstash_redis_url or self.redis_url
 
+    # Feature flags — hot-reloadable JSON (see backend/feature-flags.json)
+    feature_flags_path: str = ""
+
     # OpenAI — enable Zero Data Retention in OpenAI dashboard + BAA before production PHI
     openai_api_key: str = ""
     openai_chat_model: str = "gpt-4o"
     openai_zero_data_retention: bool = True
+
+    # Ollama — local, free; no API key required (install: https://ollama.com)
+    ollama_base_url: str = "http://localhost:11434/v1"
+
+    # Google Gemini — https://aistudio.google.com/apikey
+    gemini_api_key: str = ""
+
+    # xAI Grok — https://console.x.ai/
+    grok_api_key: str = ""
+    grok_base_url: str = "https://api.x.ai/v1"
 
     # Google Calendar (optional — mock slots when unset)
     google_calendar_id: str = ""
@@ -56,6 +69,9 @@ class Settings(BaseSettings):
     # Ingestion limits
     max_upload_bytes: int = 50 * 1024 * 1024  # 50 MB
     embed_timeout_seconds: int = 30
+
+    # HIPAA — block AI when tenant has no signed BAA (override via feature-flags.json)
+    baa_enforcement: bool = True
 
 
 @lru_cache

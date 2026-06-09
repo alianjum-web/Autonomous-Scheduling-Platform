@@ -5,7 +5,7 @@ import { Activity, CheckCircle2, Database, RefreshCw, Server, XCircle } from "lu
 import { PageShell } from "@/components/common/layout/PageShell";
 import { PageHeader } from "@/components/common/molecules/PageHeader";
 import { SectionHeading } from "@/components/common/molecules/SectionHeading";
-import { useGetHealthQuery } from "@/components/common/store/healthApi";
+import { useGetAIStatusQuery, useGetHealthQuery } from "@/components/common/store/healthApi";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -39,6 +39,11 @@ function StatusRow({
 export function StatusScreen() {
   const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
   const { data: health, isLoading, isFetching, error, refetch } = useGetHealthQuery();
+  const {
+    data: aiStatus,
+    isLoading: aiLoading,
+    refetch: refetchAI,
+  } = useGetAIStatusQuery();
 
   const loading = isLoading || isFetching;
   const allHealthy = health?.status === "healthy";
@@ -49,13 +54,16 @@ export function StatusScreen() {
       <PageHeader
         eyebrow="Operations"
         title="System Status"
-        description="Live health checks for the FastAPI gateway, database, Redis, and OpenAI connectivity."
+        description="Live health checks for the FastAPI gateway, database, Redis, and AI providers (Ollama, OpenAI, Gemini, Grok)."
         imageKey="hero"
         actions={
           <Button
             variant="outline"
             size="sm"
-            onClick={() => refetch()}
+            onClick={() => {
+              void refetch();
+              void refetchAI();
+            }}
             disabled={loading}
             className="gap-1.5 rounded-full"
           >
@@ -88,12 +96,12 @@ export function StatusScreen() {
               <StatusRow label="PostgreSQL (Supabase)" ok={health.checks.database} />
               <StatusRow label="Redis (slot locks)" ok={health.checks.redis} />
               <StatusRow
-                label="OpenAI API"
-                ok={health.checks.openai}
+                label={`AI chat (${health.checks.ai_provider ?? "none"})`}
+                ok={health.checks.ai}
                 detail={
-                  health.checks.openai_latency_ms != null
-                    ? `${health.checks.openai_latency_ms} ms`
-                    : health.checks.openai
+                  health.checks.ai_latency_ms != null
+                    ? `${health.checks.ai_latency_ms} ms`
+                    : health.checks.ai
                       ? "Configured"
                       : "Not configured"
                 }
@@ -102,6 +110,45 @@ export function StatusScreen() {
           ) : null}
         </CardContent>
       </Card>
+
+      {aiStatus ? (
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base">AI provider probes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-4 text-sm text-muted-foreground">
+              Active chat:{" "}
+              <code className="rounded-md bg-muted px-1.5 py-0.5 text-xs">
+                {aiStatus.chat_provider}
+              </code>
+              {" · "}
+              Active embeddings:{" "}
+              <code className="rounded-md bg-muted px-1.5 py-0.5 text-xs">
+                {aiStatus.embedding_provider}
+              </code>
+              {aiStatus.hot_reload ? " · hot reload on" : ""}
+            </p>
+            {aiStatus.providers.map((provider) => (
+              <StatusRow
+                key={provider.provider}
+                label={provider.provider}
+                ok={provider.ok}
+                detail={
+                  provider.error ??
+                  (provider.active_for_chat || provider.active_for_embedding
+                    ? `${provider.model ?? "—"}${provider.latency_ms != null ? ` · ${provider.latency_ms} ms` : ""}`
+                    : provider.configured
+                      ? "Standby"
+                      : "No API key / Ollama offline")
+                }
+              />
+            ))}
+          </CardContent>
+        </Card>
+      ) : aiLoading ? (
+        <p className="text-sm text-muted-foreground">Probing AI providers…</p>
+      ) : null}
 
       <section className="space-y-5">
         <SectionHeading>Infrastructure</SectionHeading>

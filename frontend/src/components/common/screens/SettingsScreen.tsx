@@ -11,7 +11,8 @@ import { PageShell } from "@/components/common/layout/PageShell";
 import { AccessGate } from "@/components/common/molecules/AccessGate";
 import { PageHeader } from "@/components/common/molecules/PageHeader";
 import { resetFeatureState } from "@/components/common/store/resetFeatureState";
-import { useGetUserProfileQuery } from "@/components/common/store/settingsApi";
+import { useGetBAAStatusQuery, useAcknowledgeBAAMutation, useGetUserProfileQuery } from "@/components/common/store/settingsApi";
+import { showToast } from "@/components/ui/toast";
 import { useAppDispatch } from "@/components/common/store/hooks";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +26,10 @@ export function SettingsScreen() {
   const { data: profile, isLoading: profileLoading } = useGetUserProfileQuery(undefined, {
     skip: !session,
   });
+  const { data: baaStatus, isLoading: baaLoading } = useGetBAAStatusQuery(undefined, {
+    skip: !session || !isAdmin,
+  });
+  const [acknowledgeBAA, { isLoading: acknowledgingBAA }] = useAcknowledgeBAAMutation();
 
   const handleSignOut = async () => {
     const supabase = createClient();
@@ -46,6 +51,22 @@ export function SettingsScreen() {
       />
     );
   }
+
+  const handleAcknowledgeBAA = async () => {
+    try {
+      await acknowledgeBAA().unwrap();
+      showToast({
+        title: "BAA acknowledged",
+        description: "AI triage and document embedding are now enabled for your clinic.",
+      });
+    } catch {
+      showToast({
+        title: "Could not acknowledge BAA",
+        description: "Only clinic admins can enable AI features.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <PageShell maxWidth="2xl" className="gap-8 pb-12">
@@ -121,6 +142,47 @@ export function SettingsScreen() {
             </Button>
           </CardContent>
         </Card>
+
+        {isAdmin ? (
+          <Card className={baaStatus?.baa_signed ? "border-success/30" : "border-warning/40"}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="size-5 text-primary" aria-hidden />
+                HIPAA Business Associate Agreement
+              </CardTitle>
+              <CardDescription>
+                AI patient triage and document embedding require a signed BAA before processing
+                clinic data.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 text-sm">
+              {baaLoading ? (
+                <p className="text-muted-foreground">Checking compliance status…</p>
+              ) : baaStatus?.baa_signed ? (
+                <p className="text-success-foreground">
+                  BAA acknowledged — AI features are enabled for this clinic.
+                </p>
+              ) : (
+                <>
+                  <p className="text-muted-foreground">
+                    AI chat and RAG ingestion are blocked until a clinic admin acknowledges the
+                    BAA. Review the{" "}
+                    <Link href="/hipaa-notice" className="font-medium text-primary underline">
+                      HIPAA notice
+                    </Link>{" "}
+                    before proceeding.
+                  </p>
+                  <Button
+                    onClick={() => void handleAcknowledgeBAA()}
+                    disabled={acknowledgingBAA}
+                  >
+                    {acknowledgingBAA ? "Saving…" : "Acknowledge BAA & enable AI"}
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        ) : null}
 
         {isAdmin ? (
           <Card>

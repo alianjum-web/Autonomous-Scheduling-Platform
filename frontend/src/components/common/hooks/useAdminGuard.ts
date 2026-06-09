@@ -2,8 +2,9 @@
 
 import { selectAuthLoading, selectClinicRole, selectIsAdmin } from "@/components/auth/store/authSelectors";
 import { useAppSelector } from "@/components/common/store/hooks";
+import type { UseAdminGuardReturn } from "@/types/hooks";
 
-export function useAdminGuard() {
+export function useAdminGuard(): UseAdminGuardReturn {
   const loading = useAppSelector(selectAuthLoading);
   const isAdmin = useAppSelector(selectIsAdmin);
   const clinicRole = useAppSelector(selectClinicRole);

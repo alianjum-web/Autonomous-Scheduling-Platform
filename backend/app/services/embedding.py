@@ -9,7 +9,7 @@ import pypdf
 from docx import Document as DocxDocument
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from app.adapters.openai_client import get_openai_client
+from app.adapters.llm import embed_texts, is_embedding_available
 from app.core.config import get_settings
 from app.core.logger import get_logger
 from app.services import supabase_client
@@ -19,7 +19,6 @@ logger = get_logger(__name__)
 
 CHUNK_SIZE = 512
 CHUNK_OVERLAP = 50
-EMBED_MODEL = "text-embedding-3-small"
 BATCH_SIZE = 100
 
 splitter = RecursiveCharacterTextSplitter(
@@ -75,11 +74,11 @@ def extract_text(filename: str, file_bytes: bytes) -> str:
 
 async def embed_batch(texts: list[str]) -> list[list[float]]:
     settings = get_settings()
-    client = get_openai_client()
+    if not is_embedding_available():
+        raise RuntimeError("No embedding provider configured — set feature-flags.json and .env")
 
     async def _call() -> list[list[float]]:
-        response = await client.embeddings.create(input=texts, model=EMBED_MODEL)
-        return [item.embedding for item in response.data]
+        return await embed_texts(texts)
 
     return await asyncio.wait_for(_call(), timeout=settings.embed_timeout_seconds)
 

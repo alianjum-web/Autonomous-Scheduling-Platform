@@ -1,16 +1,22 @@
 import { baseApi } from "@/components/common/store/baseApi";
-import type { Appointment } from "./appointmentsSlice";
+import type { Appointment } from "@/types/appointments";
+import type {
+  AppointmentsListResponse,
+  CancelAppointmentResponse,
+  UpdateAppointmentResponse,
+  UpdateAppointmentStatusRequest,
+} from "@/types/schedule";
 
 export const appointmentsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getAppointments: builder.query<{ appointments: Appointment[] }, string | void>({
+    getAppointments: builder.query<AppointmentsListResponse, string | void>({
       query: (date) => ({
         url: "/v1/schedule/appointments",
         params: date ? { date } : undefined,
       }),
       providesTags: ["Appointments"],
     }),
-    cancelAppointment: builder.mutation<{ appointment_id: string; status: string }, string>({
+    cancelAppointment: builder.mutation<CancelAppointmentResponse, string>({
       query: (id) => ({
         url: `/v1/schedule/cancel/${id}`,
         method: "DELETE",
@@ -18,8 +24,8 @@ export const appointmentsApi = baseApi.injectEndpoints({
       invalidatesTags: ["Appointments"],
     }),
     updateAppointmentStatus: builder.mutation<
-      { appointment: Appointment },
-      { id: string; status: Appointment["status"] }
+      UpdateAppointmentResponse,
+      UpdateAppointmentStatusRequest
     >({
       query: ({ id, status }) => ({
         url: `/v1/schedule/appointments/${id}`,
@@ -31,5 +37,10 @@ export const appointmentsApi = baseApi.injectEndpoints({
   }),
 });
 
-export const { useGetAppointmentsQuery, useCancelAppointmentMutation, useUpdateAppointmentStatusMutation } =
-  appointmentsApi;
+export const {
+  useGetAppointmentsQuery,
+  useCancelAppointmentMutation,
+  useUpdateAppointmentStatusMutation,
+} = appointmentsApi;
+
+export type { Appointment };

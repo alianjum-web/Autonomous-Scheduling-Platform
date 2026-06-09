@@ -12,10 +12,11 @@ from openai.types.chat import ChatCompletionMessageParam
 from typing_extensions import NotRequired, TypedDict
 
 from app.schemas.db import ChatMessage
+from app.schemas.schedule import BookRequest
 
 from app.adapters.calendar_gateway import get_available_slots
-from app.adapters.openai_client import get_openai_client_optional, phi_safe_chat_kwargs
-from app.core.config import get_settings
+from app.adapters.llm import chat_complete, is_chat_available, stream_chat
+from app.core.feature_flags import get_feature_flags
 from app.core.logger import get_logger
 from app.services import supabase_client
 from app.services.emergency_keywords import (
@@ -24,6 +25,16 @@ from app.services.emergency_keywords import (
     load_keywords_from_db,
 )
 from app.services.rag import retrieve_context
+from app.services.booking_intent import (
+    extract_patient_name,
+    extract_patient_phone,
+    match_slot_from_message,
+)
+from app.services.scheduling_service import (
+    SlotLockError,
+    SlotUnavailableError,
+    book_appointment,
+)
 
 logger = get_logger(__name__)
 
@@ -56,6 +67,9 @@ class AgentState(TypedDict):
     is_emergency: bool
     token_stream: list[str]
     selected_slot: NotRequired[str | None]
+    booking_confirmed: NotRequired[bool]
+    confirmation_code: NotRequired[str | None]
+    booked_slot: NotRequired[str | None]
 
 
 def _get_stream_queue(session_id: str) -> asyncio.Queue[str | None]:
@@ -88,32 +102,26 @@ async def emergency_interceptor(state: AgentState) -> AgentState:
 
 async def intent_classifier(state: AgentState) -> AgentState:
     msg = state.get("latest_user_message", "").lower()
-    client = get_openai_client_optional()
+    flags = get_feature_flags()
 
-    if client:
+    if flags.features.triage.intent_classifier_enabled and is_chat_available():
         try:
-            settings = get_settings()
-            response = await client.chat.completions.create(
-                model=settings.openai_chat_model,
-                messages=cast(
-                    list[ChatCompletionMessageParam],
-                    [
-                        {
-                            "role": "system",
-                            "content": (
-                                "Classify patient intent. Output ONLY one of: "
-                                "faq | booking_request | slot_confirmation | cancellation | "
-                                "escalation | unknown"
-                            ),
-                        },
-                        {"role": "user", "content": state["latest_user_message"]},
-                    ],
-                ),
+            raw = await chat_complete(
+                [
+                    {
+                        "role": "system",
+                        "content": (
+                            "Classify patient intent. Output ONLY one of: "
+                            "faq | booking_request | slot_confirmation | cancellation | "
+                            "escalation | unknown"
+                        ),
+                    },
+                    {"role": "user", "content": state["latest_user_message"]},
+                ],
                 max_tokens=10,
                 temperature=0,
-                **phi_safe_chat_kwargs(),
             )
-            raw = (response.choices[0].message.content or "unknown").strip().lower()
+            raw = raw.strip().lower()
             valid = {
                 "faq", "booking_request", "slot_confirmation",
                 "cancellation", "escalation", "unknown",
@@ -196,24 +204,12 @@ Rules:
     )
     tokens: list[str] = []
     queue = _get_stream_queue(state["session_id"])
-    client = get_openai_client_optional()
 
-    if client:
+    if is_chat_available():
         try:
-            settings = get_settings()
-            stream = await client.chat.completions.create(
-                model=settings.openai_chat_model,
-                messages=messages,
-                stream=True,
-                temperature=0.4,
-                max_tokens=500,
-                **phi_safe_chat_kwargs(),
-            )
-            async for chunk in stream:
-                token = chunk.choices[0].delta.content or ""
-                if token:
-                    tokens.append(token)
-                    await queue.put(token)
+            async for token in stream_chat(messages, temperature=0.4, max_tokens=500):
+                tokens.append(token)
+                await queue.put(token)
         except Exception as exc:
             logger.warning("LLM streaming failed", extra={"extra_data": {"error": str(exc)}})
 
@@ -228,6 +224,118 @@ Rules:
 
     await queue.put(None)
     return {**state, "final_response": final, "token_stream": tokens}
+
+
+async def _stream_text_to_queue(session_id: str, text: str) -> list[str]:
+    queue = _get_stream_queue(session_id)
+    tokens: list[str] = []
+    for word in text.split():
+        token = word + " "
+        tokens.append(token)
+        await queue.put(token)
+    await queue.put(None)
+    return tokens
+
+
+async def booking_executor(state: AgentState) -> AgentState:
+    """Autonomous booking — Redis lock + calendar + DB insert when patient confirms a slot."""
+    slots = state.get("available_slots", [])
+    message = state.get("latest_user_message", "")
+    messages = state.get("messages", [])
+    selected = state.get("selected_slot") or match_slot_from_message(message, slots)
+    patient_name = extract_patient_name(messages)
+    patient_phone = extract_patient_phone(messages)
+
+    if not selected:
+        response = (
+            "I'd be happy to confirm your appointment. Which of the available times works best "
+            "for you? You can reply with the day and time."
+        )
+        if slots:
+            formatted = "\n".join(f"• {s}" for s in slots[:5])
+            response = f"{response}\n\nAvailable times:\n{formatted}"
+        tokens = await _stream_text_to_queue(state["session_id"], response)
+        return {
+            **state,
+            "final_response": response,
+            "token_stream": tokens,
+            "booking_confirmed": False,
+        }
+
+    if not patient_name:
+        response = (
+            f"Great — I'll book {selected} for you. What name should I put the appointment under?"
+        )
+        tokens = await _stream_text_to_queue(state["session_id"], response)
+        return {
+            **state,
+            "selected_slot": selected,
+            "final_response": response,
+            "token_stream": tokens,
+            "booking_confirmed": False,
+        }
+
+    try:
+        result = await book_appointment(
+            state["tenant_id"],
+            BookRequest(
+                session_id=state["session_id"],
+                slot_start=selected,
+                selected_slot=selected,
+                patient_name=patient_name,
+                patient_phone=patient_phone,
+            ),
+        )
+        response = (
+            f"You're all set, {patient_name}! Your appointment is confirmed for {selected}. "
+            f"Confirmation code: {result.confirmation_code}. "
+            "We look forward to seeing you."
+        )
+        tokens = await _stream_text_to_queue(state["session_id"], response)
+        return {
+            **state,
+            "selected_slot": selected,
+            "booking_confirmed": True,
+            "confirmation_code": result.confirmation_code,
+            "booked_slot": selected,
+            "final_response": response,
+            "token_stream": tokens,
+        }
+    except SlotLockError:
+        response = (
+            "Someone else is booking that slot right now. Please wait a moment and try again, "
+            "or choose another time."
+        )
+    except SlotUnavailableError:
+        response = (
+            "That slot was just taken. Here are other options — reply with a time that works:\n"
+            + "\n".join(f"• {s}" for s in slots[:5])
+        )
+    except Exception as exc:
+        logger.warning("Autonomous booking failed", extra={"extra_data": {"error": str(exc)}})
+        response = (
+            "I couldn't complete the booking automatically. A care coordinator can help you "
+            "finish scheduling — would you like me to connect you with our team?"
+        )
+        tokens = await _stream_text_to_queue(state["session_id"], response)
+        return {
+            **state,
+            "selected_slot": selected,
+            "final_response": response,
+            "token_stream": tokens,
+            "booking_confirmed": False,
+            "should_escalate": True,
+        }
+
+    tokens = await _stream_text_to_queue(state["session_id"], response)
+    return {
+        **state,
+        "selected_slot": selected,
+        "final_response": response,
+        "token_stream": tokens,
+        "booking_confirmed": False,
+        "should_escalate": False,
+    }
 
 
 def _fallback_response(state: AgentState) -> str:
@@ -294,11 +402,13 @@ def route_after_intent(state: AgentState) -> str:
     if intent in ("faq", "unknown"):
         return "rag_retriever"
     if intent == "slot_confirmation":
-        return "response_generator"
+        return "slot_checker"
     return "response_generator"
 
 
-def route_after_slot(_state: AgentState) -> str:
+def route_after_slot(state: AgentState) -> str:
+    if state.get("intent") == "slot_confirmation":
+        return "booking_executor"
     return "rag_retriever"
 
 
@@ -318,6 +428,7 @@ def build_triage_graph():
     graph.add_node("rag_retriever", rag_retriever)
     graph.add_node("slot_checker", slot_checker)
     graph.add_node("response_generator", response_generator)
+    graph.add_node("booking_executor", booking_executor)
     graph.add_node("escalation_trigger", escalation_trigger)
 
     graph.set_entry_point("emergency_interceptor")
@@ -336,9 +447,14 @@ def build_triage_graph():
             "response_generator": "response_generator",
         },
     )
-    graph.add_conditional_edges("slot_checker", route_after_slot, {"rag_retriever": "rag_retriever"})
+    graph.add_conditional_edges(
+        "slot_checker",
+        route_after_slot,
+        {"booking_executor": "booking_executor", "rag_retriever": "rag_retriever"},
+    )
     graph.add_edge("rag_retriever", "response_generator")
     graph.add_edge("response_generator", END)
+    graph.add_edge("booking_executor", END)
     graph.add_edge("escalation_trigger", END)
     return graph
 
@@ -381,14 +497,6 @@ async def run_triage_agent(
             (history or []) + [{"role": "user", "content": message}],
         ),
         "latest_user_message": message,
-        "intent": "unknown",
-        "rag_context": [],
-        "available_slots": [],
-        "selected_slot": None,
-        "final_response": "",
-        "should_escalate": False,
-        "is_emergency": False,
-        "token_stream": [],
     }
 
     await supabase_client.save_session_thread(
@@ -418,6 +526,8 @@ async def run_triage_agent(
         triage_status = "emergency"
     elif result.get("should_escalate"):
         triage_status = "escalated_to_human"
+    elif result.get("booking_confirmed"):
+        triage_status = "confirmed"
     else:
         triage_status = "active"
 
@@ -438,6 +548,9 @@ async def run_triage_agent(
         "should_escalate": result.get("should_escalate", False),
         "is_emergency": result.get("is_emergency", False),
         "intent": result.get("intent", "unknown"),
+        "booking_confirmed": result.get("booking_confirmed", False),
+        "confirmation_code": result.get("confirmation_code"),
+        "booked_slot": result.get("booked_slot"),
     }
 
     _stream_queues.pop(session_id, None)

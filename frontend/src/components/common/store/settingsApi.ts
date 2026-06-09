@@ -1,13 +1,17 @@
 import { fetchUserProfile } from "@/lib/supabase/onboarding";
 
 import { baseApi } from "./baseApi";
+import type { BAAAcknowledgeResponse, BAAStatusResponse } from "@/types/compliance";
+import type { ProfileTenantEmbed } from "@/types/supabase-profile";
+import type { UserProfileSummary } from "@/types/settings";
 
-export interface UserProfileSummary {
-  clinicName: string | null;
-  workspaceSlug: string | null;
-  email: string | null;
-  fullName: string | null;
-  role: string | null;
+export type { BAAStatusResponse, UserProfileSummary };
+
+function resolveTenantEmbed(
+  tenants: ProfileTenantEmbed | ProfileTenantEmbed[] | null | undefined,
+): ProfileTenantEmbed | null {
+  if (!tenants) return null;
+  return Array.isArray(tenants) ? (tenants[0] ?? null) : tenants;
 }
 
 export const settingsApi = baseApi.injectEndpoints({
@@ -27,20 +31,32 @@ export const settingsApi = baseApi.injectEndpoints({
           };
         }
 
-        const tenant = data.profile?.tenants as { name?: string; slug?: string } | null;
+        const tenant = resolveTenantEmbed(data.profile?.tenants);
         return {
           data: {
             clinicName: tenant?.name ?? null,
             workspaceSlug: tenant?.slug ?? null,
             email: data.user.email ?? null,
             fullName: data.profile?.full_name ?? null,
-            role: (data.profile?.role as string | null) ?? null,
+            role: data.profile?.role ?? null,
           },
         };
       },
       providesTags: ["Profile"],
     }),
+    getBAAStatus: builder.query<BAAStatusResponse, void>({
+      query: () => "/v1/compliance/baa/status",
+      providesTags: ["Compliance"],
+    }),
+    acknowledgeBAA: builder.mutation<BAAAcknowledgeResponse, void>({
+      query: () => ({
+        url: "/v1/compliance/baa/acknowledge",
+        method: "POST",
+      }),
+      invalidatesTags: ["Compliance"],
+    }),
   }),
 });
 
-export const { useGetUserProfileQuery } = settingsApi;
+export const { useGetUserProfileQuery, useGetBAAStatusQuery, useAcknowledgeBAAMutation } =
+  settingsApi;

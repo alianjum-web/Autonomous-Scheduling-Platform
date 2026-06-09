@@ -5,6 +5,9 @@ import { createClient } from "@/lib/supabase/client";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+/** Typed RTK Query base query — endpoint handlers specify concrete response types. */
+export type ApiBaseQuery = BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError>;
+
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: API_BASE,
   prepareHeaders: async (headers) => {
@@ -18,11 +21,7 @@ const rawBaseQuery = fetchBaseQuery({
   },
 });
 
-const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (
-  args,
-  api,
-  extraOptions,
-) => {
+const baseQueryWithReauth: ApiBaseQuery = async (args, api, extraOptions) => {
   let result = await rawBaseQuery(args, api, extraOptions);
 
   if (result.error?.status === 403) {
@@ -39,6 +38,6 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
 export const baseApi = createApi({
   reducerPath: "api",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["Documents", "IngestionJob", "Appointments", "Profile"],
+  tagTypes: ["Documents", "IngestionJob", "Appointments", "Profile", "Compliance"],
   endpoints: () => ({}),
 });

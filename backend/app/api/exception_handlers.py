@@ -22,6 +22,7 @@ from app.services.scheduling_service import (
     SlotLockError,
     SlotUnavailableError,
 )
+from app.services.compliance import BAARequiredError, require_tenant_baa
 from app.services.triage_service import RateLimitExceededError, SessionNotFoundError
 
 
@@ -82,6 +83,13 @@ async def _ingestion_job_not_found(_request: Request, _exc: IngestionJobNotFound
     return _json_error(status.HTTP_404_NOT_FOUND, "Job not found")
 
 
+async def _baa_required(_request: Request, exc: BAARequiredError) -> JSONResponse:
+    return _json_error(
+        status.HTTP_403_FORBIDDEN,
+        {"message": str(exc), "code": "baa_required"},
+    )
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(SessionNotFoundError, _session_not_found)
     app.add_exception_handler(RateLimitExceededError, _rate_limit_exceeded)
@@ -94,3 +102,4 @@ def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(EmptyFileError, _empty_file)
     app.add_exception_handler(DocumentAlreadyIngestedError, _duplicate_document)
     app.add_exception_handler(IngestionJobNotFoundError, _ingestion_job_not_found)
+    app.add_exception_handler(BAARequiredError, _baa_required)

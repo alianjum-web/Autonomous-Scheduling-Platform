@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import type { UserProfileFetchResult } from "@/types/supabase-profile";
 
 export interface OnboardingInput {
   clinicName: string;
@@ -15,10 +16,12 @@ export async function completeOnboarding(input: OnboardingInput): Promise<string
   });
 
   if (error) throw new Error(error.message);
-  if (!data) throw new Error("Onboarding failed — no tenant returned.");
+  if (typeof data !== "string" || !data) {
+    throw new Error("Onboarding failed — no tenant returned.");
+  }
 
   await supabase.auth.refreshSession();
-  return data as string;
+  return data;
 }
 
 export function slugifyClinicName(name: string): string {
@@ -30,7 +33,7 @@ export function slugifyClinicName(name: string): string {
     .slice(0, 48);
 }
 
-export async function fetchUserProfile() {
+export async function fetchUserProfile(): Promise<UserProfileFetchResult | null> {
   const supabase = createClient();
   const {
     data: { user },
@@ -43,5 +46,8 @@ export async function fetchUserProfile() {
     .eq("id", user.id)
     .maybeSingle();
 
-  return { user, profile };
+  return {
+    user,
+    profile: profile as UserProfileFetchResult["profile"],
+  };
 }

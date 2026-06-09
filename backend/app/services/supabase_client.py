@@ -86,6 +86,44 @@ class SupabaseService:
 
         return await self._run(_ping)
 
+    # ── Tenants / compliance ───────────────────────────────────────────────────
+
+    async def get_tenant(self, tenant_id: str) -> dict[str, Any] | None:
+        def _fetch() -> dict[str, Any] | None:
+            result = (
+                self.get_client()
+                .table("tenants")
+                .select("id, slug, name, hipaa_baa_signed_at, hipaa_baa_signed_by, created_at")
+                .eq("id", tenant_id)
+                .maybe_single()
+                .execute()
+            )
+            return _optional_row(_response_data(result))
+
+        return await self._run(_fetch)
+
+    async def acknowledge_tenant_baa(self, tenant_id: str, user_id: str) -> dict[str, Any]:
+        now = datetime.now(timezone.utc).isoformat()
+
+        def _update() -> dict[str, Any]:
+            result = (
+                self.get_client()
+                .table("tenants")
+                .update({
+                    "hipaa_baa_signed_at": now,
+                    "hipaa_baa_signed_by": user_id,
+                    "updated_at": now,
+                })
+                .eq("id", tenant_id)
+                .execute()
+            )
+            rows = _rows(_response_data(result))
+            if not rows:
+                raise RuntimeError("Tenant not found for BAA acknowledgement")
+            return rows[0]
+
+        return await self._run(_update)
+
     # ── Patient sessions ──────────────────────────────────────────────────────
 
     async def create_patient_session(
@@ -523,6 +561,8 @@ supabase_service = SupabaseService()
 supabase_client = supabase_service
 warm_supabase_pool = supabase_service.warm_pool
 ping_supabase = supabase_service.ping
+get_tenant = supabase_service.get_tenant
+acknowledge_tenant_baa = supabase_service.acknowledge_tenant_baa
 get_supabase_client = supabase_service.get_client
 
 create_patient_session = supabase_service.create_patient_session
