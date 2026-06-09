@@ -1,7 +1,7 @@
 /** Schedule / booking API contracts (FastAPI /v1/schedule/*). */
 
 import type { Appointment } from "@/types/appointments";
-import type { AppointmentStatus } from "@/types/database";
+import type { AppointmentStatus } from "@/types/database.types";
 
 export interface SlotsResponse {
   slots: string[];

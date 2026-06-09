@@ -1,6 +1,6 @@
 /** Ingest API response types (FastAPI /v1/ingest/* + Next.js proxy). */
 
-import type { IngestionJobStatus } from "@/types/database";
+import type { IngestionJobStatus } from "@/types/database.types";
 
 export interface IngestUploadResponse {
   job_id: string;

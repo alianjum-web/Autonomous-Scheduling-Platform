@@ -22,7 +22,7 @@ from app.services.scheduling_service import (
     SlotLockError,
     SlotUnavailableError,
 )
-from app.services.compliance import BAARequiredError, require_tenant_baa
+from app.services.compliance import BAARequiredError
 from app.services.triage_service import RateLimitExceededError, SessionNotFoundError
 
 

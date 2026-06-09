@@ -52,6 +52,7 @@ jobs:
       - run: pytest tests/ -v --cov=app --cov-report=xml
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           SUPABASE_JWT_SECRET: ${{ secrets.SUPABASE_JWT_SECRET }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -103,7 +104,7 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: 2.20.0
+          version: 2.105.0
 
       - name: Apply pending migrations
         run: bash scripts/db/push.sh

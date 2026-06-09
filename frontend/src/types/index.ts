@@ -1,17 +1,17 @@
 /** Cross-module type barrel — domain types live here, not in store slices. */
 
+export type { Database } from "@/types/database";
 export type {
   AppointmentRow,
   AppointmentStatus,
   ChatMessage as DbChatMessage,
   ClinicDocumentRow,
-  Database,
   IngestionJobRow,
   IngestionJobStatus,
   PatientSessionRow,
   ProfileRow,
   SessionStatus,
-} from "@/types/database";
+} from "@/types/database.types";
 
 export type { Appointment, Escalation, ViewMode } from "@/types/appointments";
 

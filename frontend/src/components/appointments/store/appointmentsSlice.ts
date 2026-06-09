@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
-import type { AppointmentStatus } from "@/types/database";
+import type { AppointmentStatus } from "@/types/database.types";
 import type { Appointment, Escalation, ViewMode } from "@/types/appointments";
 
 export type { Appointment, AppointmentStatus, Escalation, ViewMode };

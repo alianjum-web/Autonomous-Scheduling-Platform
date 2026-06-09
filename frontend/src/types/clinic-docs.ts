@@ -3,7 +3,7 @@ import type {
   DocumentCategory,
   IngestionJobRow,
   IngestionJobStatus,
-} from "@/types/database";
+} from "@/types/database.types";
 
 export type { DocumentCategory, IngestionJobStatus };
 

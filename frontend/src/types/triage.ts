@@ -1,6 +1,6 @@
 /** UI triage chat state types + FastAPI /v1/triage/* contracts. */
 
-import type { ChatMessage as DbChatMessage } from "@/types/database";
+import type { ChatMessage as DbChatMessage } from "@/types/database.types";
 
 export type TriageStatus =
   | "idle"

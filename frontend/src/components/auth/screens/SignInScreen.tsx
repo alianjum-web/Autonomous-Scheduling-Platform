@@ -29,7 +29,7 @@ export function SignInScreen() {
   const redirectTo = searchParams.get("next") ?? "/chat";
   const queryError = searchParams.get("error");
   const queryMessage = searchParams.get("message");
-  const { submitError, setSubmitError, successMessage, setSuccessMessage, loading, setLoading, clearMessages } =
+  const { submitError, setSubmitError, successMessage, loading, setLoading, clearMessages } =
     useAuthSubmitState();
 
   const bannerError = queryError

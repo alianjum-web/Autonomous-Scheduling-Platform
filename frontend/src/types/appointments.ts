@@ -1,4 +1,4 @@
-import type { AppointmentRow, AppointmentStatus, PatientSessionRow } from "@/types/database";
+import type { AppointmentRow, AppointmentStatus, PatientSessionRow } from "@/types/database.types";
 
 export type { AppointmentStatus };
 

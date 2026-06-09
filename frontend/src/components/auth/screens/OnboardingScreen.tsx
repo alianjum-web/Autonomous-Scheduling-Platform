@@ -9,7 +9,6 @@ import { AuthErrorBanner } from "@/components/auth/atoms/AuthErrorBanner";
 import { AuthSubmitButton } from "@/components/auth/atoms/AuthSubmitButton";
 import { AuthLayout } from "@/components/auth/layout/AuthLayout";
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
-import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useLocalForm } from "@/components/common/hooks/useLocalForm";
