@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("home page loads", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Autonomous Scheduling");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Symptra");
 });
 
 test("chat route is reachable", async ({ page }) => {
