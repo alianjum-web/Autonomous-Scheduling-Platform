@@ -50,6 +50,13 @@ export function SignInScreen() {
     setLoading(false);
 
     if (error) {
+      const unconfirmed =
+        error.message.toLowerCase().includes("email not confirmed") ||
+        error.message.toLowerCase().includes("not confirmed");
+      if (unconfirmed) {
+        router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+        return;
+      }
       setSubmitError(error.message);
       return;
     }

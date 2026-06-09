@@ -7,6 +7,7 @@ from jose import jwt
 
 _CI_DEFAULTS = {
     "SUPABASE_URL": "https://test.supabase.co",
+    "SUPABASE_ANON_KEY": "test-anon-key",
     "SUPABASE_SERVICE_ROLE_KEY": "test-service-key",
     "SUPABASE_JWT_SECRET": "test-jwt-secret-for-unit-tests-only",
     "FRONTEND_ORIGIN": "http://localhost:3000",

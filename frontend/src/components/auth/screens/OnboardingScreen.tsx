@@ -23,7 +23,7 @@ interface OnboardingFormValues {
 
 export function OnboardingScreen() {
   const router = useRouter();
-  const { session, loading, tenantId, refreshSession } = useAuthSession();
+  const { session, loading, tenantId } = useAuthSession();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -62,7 +62,6 @@ export function OnboardingScreen() {
         clinicSlug: values.clinicSlug,
         role: values.role,
       });
-      await refreshSession();
       router.push("/chat");
       router.refresh();
     } catch (err) {
