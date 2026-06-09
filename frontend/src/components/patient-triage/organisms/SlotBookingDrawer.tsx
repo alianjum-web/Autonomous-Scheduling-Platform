@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { useReduxForm } from "@/components/common/hooks/useReduxForm";
 import { useAppDispatch, useAppSelector } from "@/components/common/store/hooks";
 import { Button } from "@/components/ui/button";
@@ -41,10 +43,11 @@ export function SlotBookingDrawer({ open, onClose, sessionId }: SlotBookingDrawe
   const patientPhone = useAppSelector(selectPatientPhone);
   const { selectedSlot, reserving, chooseSlot, confirmBooking } = useBookingFlow(sessionId);
 
-  const form = useReduxForm<BookingPatientForm>({
-    patientName,
-    patientPhone,
-  });
+  const formValues = useMemo(
+    () => ({ patientName, patientPhone }),
+    [patientName, patientPhone],
+  );
+  const form = useReduxForm<BookingPatientForm>(formValues);
 
   if (!open) return null;
 

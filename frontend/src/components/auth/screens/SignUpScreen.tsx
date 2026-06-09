@@ -11,7 +11,7 @@ import { validatePasswordPair } from "@/components/auth/hooks/validatePasswordPa
 import { AuthLayout } from "@/components/auth/layout/AuthLayout";
 import { AuthEmailField } from "@/components/auth/molecules/AuthEmailField";
 import { AuthPasswordField } from "@/components/auth/molecules/AuthPasswordField";
-import { useReduxForm } from "@/components/common/hooks/useReduxForm";
+import { useLocalForm } from "@/components/common/hooks/useLocalForm";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
@@ -28,11 +28,11 @@ export function SignUpScreen() {
   const { submitError, setSubmitError, successMessage, setSuccessMessage, loading, setLoading, clearMessages } =
     useAuthSubmitState();
 
-  const form = useReduxForm<SignUpFormValues>({
-    fullName: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
+  const form = useLocalForm<SignUpFormValues>({
+    fullName: "Anjum",
+    email: "muhammadaliabbas7890@gmail.com",
+    password: "12345678",
+    confirmPassword: "12345678",
   });
   const supabase = createClient();
 
@@ -46,28 +46,35 @@ export function SignUpScreen() {
     }
 
     setLoading(true);
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName },
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
-      },
-    });
-    setLoading(false);
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: fullName },
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
+        },
+      });
 
-    if (error) {
-      setSubmitError(error.message);
-      return;
+      if (error) {
+        setSubmitError(error.message);
+        return;
+      }
+
+      if (data.user && !data.session) {
+        router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+        return;
+      }
+
+      setSuccessMessage("Account created. Setting up your workspace…");
+      setTimeout(() => router.push("/onboarding"), 800);
+    } catch {
+      setSubmitError(
+        "Unable to reach Supabase. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in frontend/.env.local, then restart the dev server.",
+      );
+    } finally {
+      setLoading(false);
     }
-
-    if (data.user && !data.session) {
-      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
-      return;
-    }
-
-    setSuccessMessage("Account created. Setting up your workspace…");
-    setTimeout(() => router.push("/onboarding"), 800);
   });
 
   return (

@@ -10,7 +10,7 @@ import { validatePasswordPair } from "@/components/auth/hooks/validatePasswordPa
 import { AuthLayout } from "@/components/auth/layout/AuthLayout";
 import { AuthPasswordField } from "@/components/auth/molecules/AuthPasswordField";
 import { LoadingScreen } from "@/components/common/molecules/LoadingScreen";
-import { useReduxForm } from "@/components/common/hooks/useReduxForm";
+import { useLocalForm } from "@/components/common/hooks/useLocalForm";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { createClient } from "@/lib/supabase/client";
@@ -25,7 +25,7 @@ export function ResetPasswordScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [sessionReady, setSessionReady] = useState<boolean | null>(null);
-  const form = useReduxForm<ResetPasswordFormValues>({ password: "", confirmPassword: "" });
+  const form = useLocalForm<ResetPasswordFormValues>({ password: "", confirmPassword: "" });
   const supabase = createClient();
 
   useEffect(() => {

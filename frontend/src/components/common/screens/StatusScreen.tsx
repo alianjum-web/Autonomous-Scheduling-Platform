@@ -4,6 +4,7 @@ import { Activity, CheckCircle2, Database, RefreshCw, Server, XCircle } from "lu
 
 import { PageShell } from "@/components/common/layout/PageShell";
 import { PageHeader } from "@/components/common/molecules/PageHeader";
+import { SectionHeading } from "@/components/common/molecules/SectionHeading";
 import { useGetHealthQuery } from "@/components/common/store/healthApi";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,8 +20,8 @@ function StatusRow({
   detail?: string;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-border/60 py-3 last:border-0">
-      <div className="flex items-center gap-2">
+    <div className="flex items-center justify-between gap-4 border-b border-border/70 py-3.5 last:border-0">
+      <div className="flex items-center gap-2.5">
         {ok ? (
           <CheckCircle2 className="size-4 text-success" aria-hidden />
         ) : (
@@ -44,14 +45,20 @@ export function StatusScreen() {
   const errorMessage = error ? "Unable to reach the API health endpoint." : null;
 
   return (
-    <PageShell maxWidth="2xl" className="gap-8 pb-16">
+    <PageShell maxWidth="6xl" className="gap-10 pb-20">
       <PageHeader
         eyebrow="Operations"
         title="System Status"
         description="Live health checks for the FastAPI gateway, database, Redis, and OpenAI connectivity."
         imageKey="hero"
         actions={
-          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={loading} className="gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={loading}
+            className="gap-1.5 rounded-full"
+          >
             <RefreshCw className={cn("size-4", loading && "animate-spin")} aria-hidden />
             Refresh
           </Button>
@@ -59,8 +66,8 @@ export function StatusScreen() {
       />
 
       <Card className={cn("hero-glow", allHealthy ? "border-success/30" : "border-warning/40")}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2.5">
             <Activity className="size-5 text-primary" aria-hidden />
             Platform health
           </CardTitle>
@@ -72,7 +79,7 @@ export function StatusScreen() {
             <p className="text-sm text-destructive">{errorMessage}</p>
           ) : health ? (
             <>
-              <p className="mb-4 text-sm capitalize text-muted-foreground">
+              <p className="mb-5 text-sm capitalize text-muted-foreground">
                 Overall:{" "}
                 <span className={cn("font-semibold", allHealthy ? "text-success" : "text-warning")}>
                   {health.status}
@@ -96,31 +103,34 @@ export function StatusScreen() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Server className="size-4 text-primary" aria-hidden />
-              API gateway
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            FastAPI microservice at{" "}
-            <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{apiBase}</code>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Database className="size-4 text-primary" aria-hidden />
-              Data plane
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Supabase PostgreSQL with RLS, Realtime, and pgvector for clinic document RAG.
-          </CardContent>
-        </Card>
-      </div>
+      <section className="space-y-5">
+        <SectionHeading>Infrastructure</SectionHeading>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2.5 text-base">
+                <Server className="size-4 text-primary" aria-hidden />
+                API gateway
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm leading-relaxed text-muted-foreground">
+              FastAPI microservice at{" "}
+              <code className="rounded-md bg-muted px-1.5 py-0.5 text-xs">{apiBase}</code>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2.5 text-base">
+                <Database className="size-4 text-primary" aria-hidden />
+                Data plane
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm leading-relaxed text-muted-foreground">
+              Supabase PostgreSQL with RLS, Realtime, and pgvector for clinic document RAG.
+            </CardContent>
+          </Card>
+        </div>
+      </section>
     </PageShell>
   );
 }

@@ -52,6 +52,11 @@
 
   --shadow-card: 0 4px 24px -4px rgb(15 23 42 / 0.08);
   --shadow-elevated: 0 12px 40px -8px rgb(37 99 235 / 0.15);
+
+  --bg-page-gradient:
+    radial-gradient(ellipse 80% 50% at 50% -20%, hsl(var(--primary) / 0.1), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 0%, hsl(var(--info) / 0.08), transparent),
+    hsl(var(--background));
 }
 
 .dark {
@@ -145,75 +150,106 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
-/* ── Dashboard surfaces (Symptra / Panacea) ── */
-.dashboard-card {
-  @apply rounded-2xl border border-border/60 bg-card text-card-foreground;
-  box-shadow: var(--shadow-card);
-}
-
-.dashboard-card-hover {
-  @apply rounded-2xl border border-border/60 bg-card text-card-foreground;
-  @apply transition-all duration-200 hover:-translate-y-0.5;
-  box-shadow: var(--shadow-card);
-}
-.dashboard-card-hover:hover {
-  box-shadow: var(--shadow-elevated);
-}
-
-.sidebar-nav-active {
-  background: hsl(var(--sidebar-active-bg));
-  color: hsl(var(--sidebar-active));
-  @apply font-medium;
-}
-
-.gradient-brand {
-  @apply bg-gradient-to-r from-primary via-info to-emerald-400;
-}
-
-.gradient-brand-text {
-  @apply bg-gradient-to-r from-primary via-info to-emerald-500 bg-clip-text text-transparent;
-}
-
-.page-gradient {
-  background:
-    radial-gradient(ellipse 80% 50% at 50% -20%, hsl(var(--primary) / 0.1), transparent),
-    radial-gradient(ellipse 60% 40% at 100% 0%, hsl(var(--info) / 0.08), transparent),
-    hsl(var(--background));
-}
-
-.mesh-bg {
-  background-color: hsl(var(--background));
-  background-image:
-    radial-gradient(at 40% 20%, hsl(var(--primary) / 0.06) 0px, transparent 50%),
-    radial-gradient(at 80% 0%, hsl(var(--info) / 0.05) 0px, transparent 50%);
-}
-
-.glass-panel {
-  @apply rounded-2xl border border-border/50 bg-card/80 backdrop-blur-xl;
-  box-shadow: var(--shadow-card);
-}
-
-.dark .glass-panel {
-  @apply bg-card/60 border-white/10;
-}
-
-.text-gradient {
-  @apply bg-gradient-to-r from-primary via-info to-emerald-500 bg-clip-text text-transparent;
-}
-
-.hero-glow {
-  box-shadow: var(--shadow-elevated);
-}
-
-.hero-banner {
-  @apply relative overflow-hidden rounded-2xl p-6 text-primary-foreground;
-  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--info)) 100%);
-}
-
 @layer components {
+  /* ── Dashboard surfaces (Symptra / Panacea) ── */
+  .dashboard-card {
+    @apply rounded-2xl border border-border/70 bg-card text-card-foreground;
+    box-shadow: var(--shadow-card);
+  }
+
+  .dark .dashboard-card {
+    @apply border-border/80;
+  }
+
+  .dashboard-card-hover {
+    @apply rounded-2xl border border-border/70 bg-card text-card-foreground;
+    @apply transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/25;
+    box-shadow: var(--shadow-card);
+  }
+
+  .dark .dashboard-card-hover {
+    @apply border-border/80;
+  }
+
+  .dashboard-card-hover:hover {
+    box-shadow: var(--shadow-elevated);
+  }
+
+  .sidebar-nav-active {
+    background: hsl(var(--sidebar-active-bg));
+    color: hsl(var(--sidebar-active));
+    @apply font-medium;
+  }
+
+  .gradient-brand {
+    @apply bg-linear-to-r from-primary via-info to-emerald-400;
+  }
+
+  .gradient-brand-text,
+  .text-gradient {
+    @apply bg-linear-to-r from-primary via-info to-emerald-500 bg-clip-text text-transparent;
+  }
+
+  .page-gradient,
+  .marketing-page {
+    background: var(--bg-page-gradient);
+  }
+
+  .marketing-page {
+    @apply flex flex-1 flex-col;
+  }
+
+  .mesh-bg {
+    background-color: hsl(var(--background));
+    background-image:
+      radial-gradient(at 40% 20%, hsl(var(--primary) / 0.06) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, hsl(var(--info) / 0.05) 0px, transparent 50%);
+  }
+
+  .glass-panel {
+    @apply rounded-2xl border border-border/50 bg-card/80 backdrop-blur-xl;
+    box-shadow: var(--shadow-card);
+  }
+
+  .dark .glass-panel {
+    @apply border-white/10 bg-card/60;
+  }
+
+  .hero-glow {
+    box-shadow: var(--shadow-elevated);
+  }
+
+  .hero-banner {
+    @apply relative overflow-hidden rounded-2xl p-6 text-primary-foreground;
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--info)) 100%);
+  }
+
+  .section-heading {
+    @apply text-xl font-semibold tracking-tight sm:text-2xl;
+  }
+
+  .section-eyebrow {
+    @apply text-xs font-semibold uppercase tracking-widest text-primary;
+  }
+
+  .content-divider {
+    @apply border-t border-border/70 pt-12;
+  }
+
+  .pill-nav {
+    @apply inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all;
+  }
+
+  .pill-nav-active {
+    @apply bg-foreground text-background shadow-sm;
+  }
+
+  .pill-nav-inactive {
+    @apply text-muted-foreground hover:bg-muted hover:text-foreground;
+  }
+
   .form-section {
-    @apply rounded-2xl border border-border/60 bg-card text-card-foreground;
-    @apply space-y-6 p-6;
+    @apply space-y-6 rounded-2xl border border-border/60 bg-card p-6 text-card-foreground;
     box-shadow: var(--shadow-card);
   }
 
@@ -247,7 +283,7 @@ body {
   }
 
   .form-input {
-    @apply flex h-11 w-full rounded-xl border border-input bg-background px-4 py-2 text-base shadow-xs transition-[color,box-shadow,border-color] ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm;
+    @apply flex h-11 w-full rounded-xl border border-input bg-background px-4 py-2 text-base shadow-xs ring-offset-background transition-[color,box-shadow,border-color] placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm;
   }
 
   .form-input[aria-invalid="true"] {
@@ -255,7 +291,7 @@ body {
   }
 
   .form-textarea {
-    @apply flex min-h-[120px] w-full resize-y rounded-xl border border-input bg-background px-4 py-3 text-base shadow-xs transition-[color,box-shadow,border-color] ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm;
+    @apply flex min-h-[120px] w-full resize-y rounded-xl border border-input bg-background px-4 py-3 text-base shadow-xs ring-offset-background transition-[color,box-shadow,border-color] placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm;
   }
 
   .form-textarea[aria-invalid="true"] {
@@ -263,12 +299,12 @@ body {
   }
 
   .form-select {
-    @apply flex h-11 w-full appearance-none rounded-xl border border-input bg-[length:1rem] bg-[right_0.75rem_center] bg-background bg-no-repeat px-4 py-2 pr-10 text-base shadow-xs transition-[color,box-shadow,border-color] ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm;
+    @apply flex h-11 w-full appearance-none rounded-xl border border-input bg-size-[1rem] bg-position-[right_0.75rem_center] bg-background bg-no-repeat px-4 py-2 pr-10 text-base shadow-xs ring-offset-background transition-[color,box-shadow,border-color] placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   }
 
   .form-checkbox {
-    @apply h-4 w-4 shrink-0 rounded border border-input text-primary shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply h-4 w-4 shrink-0 rounded border border-input text-primary shadow-xs focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .form-actions {
@@ -276,11 +312,11 @@ body {
   }
 
   .form-actions-primary {
-    @apply inline-flex h-11 items-center justify-center rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex h-11 items-center justify-center rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50;
   }
 
   .form-actions-secondary {
-    @apply inline-flex h-11 items-center justify-center rounded-xl border border-input bg-background px-6 text-sm font-medium text-foreground shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex h-11 items-center justify-center rounded-xl border border-input bg-background px-6 text-sm font-medium text-foreground shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50;
   }
 
   .status-success {
@@ -288,7 +324,7 @@ body {
   }
 
   .status-warning {
-    @apply rounded-xl border border-warning/35 bg-warning/12 px-3 py-2 text-sm text-warning-foreground;
+    @apply rounded-xl border border-warning/35 bg-warning/10 px-3 py-2 text-sm text-warning-foreground;
   }
 
   .status-info {
@@ -297,17 +333,5 @@ body {
 
   .status-emergency {
     @apply rounded-xl border border-destructive bg-destructive/10 px-3 py-2 text-sm text-destructive;
-  }
-
-  .pill-nav {
-    @apply inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all;
-  }
-
-  .pill-nav-active {
-    @apply bg-foreground text-background shadow-sm;
-  }
-
-  .pill-nav-inactive {
-    @apply text-muted-foreground hover:bg-muted hover:text-foreground;
   }
 }

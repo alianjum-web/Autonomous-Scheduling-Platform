@@ -9,7 +9,7 @@ function hashColor(name: string) {
 }
 
 export function ProviderAvatar({ name, className }: { name: string; className?: string }) {
-  const initials = name
+  const initials = name // Ali Anjum -> AA
     .split(" ")
     .map((w) => w[0])
     .join("")

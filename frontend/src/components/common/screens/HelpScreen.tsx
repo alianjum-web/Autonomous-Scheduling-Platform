@@ -1,19 +1,12 @@
 import Link from "next/link";
-import {
-  ArrowRight,
-  BookOpen,
-  CalendarCheck,
-  MessageSquare,
-  Shield,
-  Upload,
-  Users,
-} from "lucide-react";
+import { BookOpen, CalendarCheck, MessageSquare, Shield, Upload, Users } from "lucide-react";
 
-import { ClinicalImage } from "@/components/common/atoms/ClinicalImage";
+import { GuideCard } from "@/components/common/molecules/GuideCard";
 import { PageShell } from "@/components/common/layout/PageShell";
 import { PageHeader } from "@/components/common/molecules/PageHeader";
+import { SectionHeading } from "@/components/common/molecules/SectionHeading";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import type { ImageAssetKey } from "@/lib/constants/images";
 
 const GUIDES: {
@@ -83,57 +76,37 @@ const FAQ = [
 
 export function HelpScreen() {
   return (
-    <PageShell maxWidth="4xl" className="gap-10 pb-16">
+    <PageShell maxWidth="6xl" className="gap-12 pb-20">
       <PageHeader
         eyebrow="Support"
         title="Help Center"
         description="Quick guides for patients and clinic staff using the Autonomous Scheduling Platform."
         imageKey="team"
         actions={
-          <Button asChild variant="outline" size="sm">
+          <Button asChild variant="outline" size="sm" className="rounded-full">
             <Link href="/status">System status</Link>
           </Button>
         }
       />
 
-      <section className="grid gap-4 sm:grid-cols-2">
-        {GUIDES.map(({ icon: Icon, title, description, href, cta, imageKey }) => (
-          <Card key={href} className="hero-glow flex flex-col overflow-hidden">
-            <div className="relative h-28">
-              <ClinicalImage asset={imageKey} variant="thumb" />
-              <div className="absolute inset-0 bg-gradient-to-t from-card via-card/30 to-transparent" />
-            </div>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Icon className="size-5 text-primary" aria-hidden />
-                {title}
-              </CardTitle>
-              <CardDescription className="leading-relaxed">{description}</CardDescription>
-            </CardHeader>
-            <CardContent className="mt-auto pt-0">
-              <Button asChild variant="link" className="h-auto gap-1 p-0">
-                <Link href={href}>
-                  {cta}
-                  <ArrowRight className="size-4" aria-hidden />
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
+      <section className="space-y-6">
+        <SectionHeading description="Step-by-step guides for the core modules in your clinic workspace.">
+          Product guides
+        </SectionHeading>
+        <div className="grid gap-6 sm:grid-cols-2">
+          {GUIDES.map((guide) => (
+            <GuideCard key={guide.href} {...guide} />
+          ))}
+        </div>
       </section>
 
-      <section className="space-y-4">
-        <h2 className="flex items-center gap-2 text-xl font-semibold">
-          <BookOpen className="size-5 text-primary" aria-hidden />
-          Frequently asked questions
-        </h2>
-        <div className="grid gap-3">
+      <section className="content-divider space-y-6">
+        <SectionHeading icon={BookOpen}>Frequently asked questions</SectionHeading>
+        <div className="grid gap-4">
           {FAQ.map(({ q, a }) => (
-            <Card key={q}>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">{q}</CardTitle>
-              </CardHeader>
-              <CardContent>
+            <Card key={q} className="transition-colors hover:border-primary/25">
+              <CardContent className="space-y-2 p-6">
+                <h3 className="font-semibold leading-snug">{q}</h3>
                 <p className="text-sm leading-relaxed text-muted-foreground">{a}</p>
               </CardContent>
             </Card>
@@ -141,18 +114,20 @@ export function HelpScreen() {
         </div>
       </section>
 
-      <Card className="border-primary/20 bg-primary/5">
-        <CardContent className="flex flex-col items-start gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <Shield className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden />
-            <div>
-              <p className="font-medium">Compliance & privacy</p>
-              <p className="text-sm text-muted-foreground">
+      <Card className="hero-glow overflow-hidden border-primary/25 bg-linear-to-br from-primary/5 via-card to-accent/20">
+        <CardContent className="flex flex-col items-start gap-5 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+          <div className="flex items-start gap-4">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+              <Shield className="size-5 text-primary" aria-hidden />
+            </span>
+            <div className="space-y-1">
+              <p className="font-semibold">Compliance & privacy</p>
+              <p className="text-sm leading-relaxed text-muted-foreground">
                 Review our HIPAA notice, privacy policy, and terms before processing patient data.
               </p>
             </div>
           </div>
-          <Button asChild variant="outline" size="sm">
+          <Button asChild variant="outline" size="sm" className="shrink-0 rounded-full">
             <Link href="/hipaa-notice">HIPAA notice</Link>
           </Button>
         </CardContent>

@@ -133,4 +133,4 @@ export async function proxy(request: NextRequest) {
   return supabaseResponse;
 }
 
-export const config = { matcher: ["/((?!_next|favicon.ico|api/).*)"] };
+export const config = { matcher: ["/((?!_next|favicon.ico|icon|apple-icon|api/).*)"] };

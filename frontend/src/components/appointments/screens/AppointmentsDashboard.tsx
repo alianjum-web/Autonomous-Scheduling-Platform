@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { CalendarDays, Clock, Users, Zap } from "lucide-react";
 
 import { AppointmentCard } from "@/components/appointments/molecules/AppointmentCard";
@@ -51,7 +51,8 @@ export function AppointmentsDashboard() {
   const selectedAppointmentId = useAppSelector(selectSelectedAppointmentId);
   const selected = useAppSelector(selectSelectedAppointment);
 
-  const form = useReduxForm<DateFilterForm>({ selectedDate });
+  const formValues = useMemo(() => ({ selectedDate }), [selectedDate]);
+  const form = useReduxForm<DateFilterForm>(formValues);
 
   const { data, refetch } = useGetAppointmentsQuery(selectedDate, { skip: !isAdmin });
 

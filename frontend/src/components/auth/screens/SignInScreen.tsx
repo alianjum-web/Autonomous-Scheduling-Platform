@@ -10,7 +10,7 @@ import { useAuthSubmitState } from "@/components/auth/hooks/useAuthSubmitState";
 import { AuthLayout } from "@/components/auth/layout/AuthLayout";
 import { AuthEmailField } from "@/components/auth/molecules/AuthEmailField";
 import { AuthPasswordField } from "@/components/auth/molecules/AuthPasswordField";
-import { useReduxForm } from "@/components/common/hooks/useReduxForm";
+import { useLocalForm } from "@/components/common/hooks/useLocalForm";
 import { Form } from "@/components/ui/form";
 import { createClient } from "@/lib/supabase/client";
 
@@ -40,7 +40,7 @@ export function SignInScreen() {
       ? "Password updated successfully. You can sign in now."
       : null;
 
-  const form = useReduxForm<SignInFormValues>({ email: "", password: "" });
+  const form = useLocalForm<SignInFormValues>({ email: "", password: "" });
   const supabase = createClient();
 
   const onSubmit = form.handleSubmit(async ({ email, password }) => {

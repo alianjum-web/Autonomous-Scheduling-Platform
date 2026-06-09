@@ -92,7 +92,7 @@ const TRUST_BADGES = [
 export default function HomePage() {
   return (
     <div className="flex flex-1 flex-col">
-      <section className="page-gradient relative overflow-hidden border-b border-border/60">
+      <section className="page-gradient relative overflow-hidden border-b border-border/70">
         <div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:items-center lg:py-24">
           <div className="space-y-8">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary">
@@ -135,7 +135,7 @@ export default function HomePage() {
           </div>
 
           <div className="relative mx-auto w-full max-w-lg lg:max-w-none">
-            <div className="hero-glow relative aspect-[4/3] overflow-hidden rounded-2xl border border-border/60">
+            <div className="hero-glow relative aspect-[4/3] overflow-hidden rounded-2xl border border-border/70">
               <ClinicalImage asset="hero" variant="hero" priority />
               <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
               <div className="absolute bottom-4 left-4 right-4 glass-panel p-4">
@@ -187,14 +187,14 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="border-y border-border/60 bg-card/30 py-20">
+      <section className="border-y border-border/70 bg-card/30 py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <h2 className="text-center text-3xl font-semibold tracking-tight">How it works</h2>
           <div className="mt-12 grid gap-8 md:grid-cols-3">
             {HOW_IT_WORKS.map(({ step, title, body, imageKey }) => (
               <div
                 key={step}
-                className="relative overflow-hidden rounded-2xl border border-border/70 bg-background shadow-sm"
+                className="dashboard-card relative overflow-hidden bg-background"
               >
                 <div className="relative h-36">
                   <ClinicalImage asset={imageKey} variant="thumb" />

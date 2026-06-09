@@ -28,6 +28,11 @@ const NAV_LINKS = [
   { href: "/clinic-docs", label: "Clinic Docs", icon: FileText },
 ] as const;
 
+const RESOURCE_LINKS = [
+  { href: "/help", label: "Help" },
+  { href: "/status", label: "Status" },
+] as const;
+
 export function MarketingShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -43,26 +48,29 @@ export function MarketingShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b border-border/60 bg-card/80 backdrop-blur-md">
+      <header className="sticky top-0 z-50 border-b border-border/70 bg-card/85 backdrop-blur-md">
         <nav
-          className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6"
+          className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:gap-4 sm:px-6"
           aria-label="Main"
         >
-          <Link href="/" className="flex items-center gap-2.5 font-bold tracking-tight">
+          <Link href="/" className="flex shrink-0 items-center gap-2.5 font-bold tracking-tight">
             <span className="flex size-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
               <Stethoscope className="size-5" aria-hidden />
             </span>
             <span className="hidden sm:inline">Symptra Scheduling</span>
           </Link>
 
-          <div className="hidden items-center gap-1 rounded-full border border-border/60 bg-muted/40 p-1 md:flex">
-            {NAV_LINKS.slice(0, 3).map(({ href, label }) => {
+          <div className="hidden items-center gap-1 rounded-full border border-border/70 bg-muted/50 p-1 lg:flex">
+            {NAV_LINKS.map(({ href, label }) => {
               const active = pathname === href;
               return (
                 <Link
                   key={href}
                   href={href}
-                  className={cn("pill-nav", active ? "pill-nav-active" : "pill-nav-inactive")}
+                  className={cn(
+                    "pill-nav px-3 text-xs xl:px-4 xl:text-sm",
+                    active ? "pill-nav-active" : "pill-nav-inactive",
+                  )}
                 >
                   {label}
                 </Link>
@@ -70,8 +78,26 @@ export function MarketingShell({ children }: { children: React.ReactNode }) {
             })}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="hidden items-center gap-1 md:flex">
+              {RESOURCE_LINKS.map(({ href, label }) => {
+                const active = pathname === href;
+                return (
+                  <Button
+                    key={href}
+                    variant="ghost"
+                    size="sm"
+                    asChild
+                    className={cn("rounded-full text-xs", active && "bg-muted font-medium text-foreground")}
+                  >
+                    <Link href={href}>{label}</Link>
+                  </Button>
+                );
+              })}
+            </div>
+
             <ThemeToggle />
+
             {loading ? (
               <div className="size-9 animate-pulse rounded-full bg-muted" />
             ) : session ? (
@@ -96,15 +122,16 @@ export function MarketingShell({ children }: { children: React.ReactNode }) {
                 <Button variant="ghost" size="sm" asChild className="hidden rounded-full sm:inline-flex">
                   <Link href="/sign-in">Sign in</Link>
                 </Button>
-                <Button size="sm" asChild className="hidden rounded-full shadow-sm sm:inline-flex">
+                <Button size="sm" asChild className="rounded-full shadow-sm">
                   <Link href="/sign-up">Get started</Link>
                 </Button>
               </>
             )}
+
             <Button
               variant="ghost"
               size="icon"
-              className="rounded-xl md:hidden"
+              className="rounded-xl lg:hidden"
               aria-label={mobileOpen ? "Close menu" : "Open menu"}
               onClick={() => setMobileOpen((o) => !o)}
             >
@@ -114,7 +141,7 @@ export function MarketingShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         {mobileOpen ? (
-          <div className="border-t border-border/60 bg-card px-4 py-4 md:hidden">
+          <div className="border-t border-border/70 bg-card px-4 py-4 lg:hidden">
             <div className="flex flex-col gap-1">
               {NAV_LINKS.map(({ href, label, icon: Icon }) => (
                 <Link
@@ -123,10 +150,24 @@ export function MarketingShell({ children }: { children: React.ReactNode }) {
                   onClick={() => setMobileOpen(false)}
                   className={cn(
                     "flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium",
-                    pathname === href ? "sidebar-nav-active" : "text-muted-foreground",
+                    pathname === href ? "sidebar-nav-active" : "text-muted-foreground hover:bg-muted/60",
                   )}
                 >
                   <Icon className="size-4" />
+                  {label}
+                </Link>
+              ))}
+              <div className="my-2 border-t border-border/60" />
+              {RESOURCE_LINKS.map(({ href, label }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={() => setMobileOpen(false)}
+                  className={cn(
+                    "rounded-xl px-3 py-2.5 text-sm font-medium",
+                    pathname === href ? "sidebar-nav-active" : "text-muted-foreground hover:bg-muted/60",
+                  )}
+                >
                   {label}
                 </Link>
               ))}
@@ -134,7 +175,8 @@ export function MarketingShell({ children }: { children: React.ReactNode }) {
           </div>
         ) : null}
       </header>
-      <main className="flex flex-1 flex-col">{children}</main>
+
+      <main className="marketing-page">{children}</main>
       <SiteFooter />
     </>
   );

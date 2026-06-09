@@ -1,7 +1,9 @@
 import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
 import { PageShell } from "@/components/common/layout/PageShell";
+import { PageHeader } from "@/components/common/molecules/PageHeader";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface LegalPageProps {
   title: string;
@@ -11,15 +13,20 @@ interface LegalPageProps {
 
 export function LegalPage({ title, lastUpdated, children }: LegalPageProps) {
   return (
-    <PageShell maxWidth="2xl" className="prose prose-neutral dark:prose-invert max-w-none pb-16">
-      <div className="not-prose mb-8 space-y-4">
-        <Button variant="ghost" size="sm" asChild className="-ml-2">
+    <PageShell maxWidth="3xl" className="gap-8 pb-20">
+      <div className="flex items-center">
+        <Button variant="ghost" size="sm" asChild className="-ml-2 rounded-full">
           <Link href="/">← Back to home</Link>
         </Button>
-        <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
-        <p className="text-sm text-muted-foreground">Last updated: {lastUpdated}</p>
       </div>
-      <div className="space-y-6 text-sm leading-relaxed text-muted-foreground">{children}</div>
+
+      <PageHeader title={title} description={`Last updated: ${lastUpdated}`} />
+
+      <Card>
+        <CardContent className="prose prose-neutral dark:prose-invert max-w-none space-y-6 p-6 text-sm leading-relaxed text-muted-foreground sm:p-8">
+          {children}
+        </CardContent>
+      </Card>
     </PageShell>
   );
 }

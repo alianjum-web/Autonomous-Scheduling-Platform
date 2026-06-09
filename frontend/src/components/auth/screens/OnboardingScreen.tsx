@@ -12,7 +12,7 @@ import { useAuthSession } from "@/components/common/hooks/useAuthSession";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useReduxForm } from "@/components/common/hooks/useReduxForm";
+import { useLocalForm } from "@/components/common/hooks/useLocalForm";
 import { completeOnboarding, slugifyClinicName } from "@/lib/supabase/onboarding";
 
 interface OnboardingFormValues {
@@ -27,7 +27,7 @@ export function OnboardingScreen() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const form = useReduxForm<OnboardingFormValues>({
+  const form = useLocalForm<OnboardingFormValues>({
     clinicName: "",
     clinicSlug: "",
     role: "patient",

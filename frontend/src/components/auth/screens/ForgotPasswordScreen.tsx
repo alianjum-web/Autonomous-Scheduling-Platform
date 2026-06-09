@@ -7,7 +7,7 @@ import { AuthErrorBanner } from "@/components/auth/atoms/AuthErrorBanner";
 import { AuthSubmitButton } from "@/components/auth/atoms/AuthSubmitButton";
 import { AuthLayout } from "@/components/auth/layout/AuthLayout";
 import { AuthEmailField } from "@/components/auth/molecules/AuthEmailField";
-import { useReduxForm } from "@/components/common/hooks/useReduxForm";
+import { useLocalForm } from "@/components/common/hooks/useLocalForm";
 import { Form } from "@/components/ui/form";
 import { createClient } from "@/lib/supabase/client";
 
@@ -19,7 +19,7 @@ export function ForgotPasswordScreen() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const form = useReduxForm<ForgotPasswordFormValues>({ email: "" });
+  const form = useLocalForm<ForgotPasswordFormValues>({ email: "" });
   const supabase = createClient();
 
   const onSubmit = form.handleSubmit(async ({ email }) => {

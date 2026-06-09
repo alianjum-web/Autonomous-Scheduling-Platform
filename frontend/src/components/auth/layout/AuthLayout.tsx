@@ -55,22 +55,22 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
       </div>
 
       <div className="flex flex-1 flex-col">
-        <div className="flex items-center justify-end gap-2 px-4 py-3 lg:px-8">
+        <div className="flex items-center justify-end gap-2 px-4 py-4 sm:px-8">
           <ThemeToggle />
         </div>
-        <div className="flex flex-1 flex-col items-center justify-center px-4 pb-12 sm:px-8">
+        <div className="flex flex-1 flex-col items-center justify-center px-4 pb-16 sm:px-8">
           <div className="mb-8 w-full max-w-md lg:hidden">
-            <Link href="/" className="inline-flex items-center gap-2 font-bold text-primary">
-              <span className="flex size-9 items-center justify-center rounded-2xl bg-primary/10">
-                <Stethoscope className="size-4" aria-hidden />
+            <Link href="/" className="inline-flex items-center gap-2.5 font-bold text-primary">
+              <span className="flex size-10 items-center justify-center rounded-2xl bg-primary/10">
+                <Stethoscope className="size-5" aria-hidden />
               </span>
               Symptra
             </Link>
           </div>
-          <div className="glass-panel w-full max-w-md space-y-8 p-8">
-            <div className="space-y-2 text-center lg:text-left">
-              <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-              <p className="text-sm text-muted-foreground">{subtitle}</p>
+          <div className="glass-panel w-full max-w-md space-y-8 border-border/70 p-8 sm:p-10">
+            <div className="space-y-2.5 text-center lg:text-left">
+              <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{title}</h1>
+              <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">{subtitle}</p>
             </div>
             {children}
           </div>

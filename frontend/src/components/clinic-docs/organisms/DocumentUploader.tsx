@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { Upload } from "lucide-react";
 
 import { useReduxForm } from "@/components/common/hooks/useReduxForm";
@@ -51,7 +51,8 @@ export function DocumentUploader({ onUploaded }: DocumentUploaderProps) {
   const uploadForm = useAppSelector(selectUploadForm);
   const { ingest, stageFile, clearStagedFile, isUploading } = useDocumentIngestion();
 
-  const form = useReduxForm<UploadFormValues>({ category: uploadForm.category });
+  const formValues = useMemo(() => ({ category: uploadForm.category }), [uploadForm.category]);
+  const form = useReduxForm<UploadFormValues>(formValues);
 
   const handleFile = useCallback(
     (file: File | null) => {

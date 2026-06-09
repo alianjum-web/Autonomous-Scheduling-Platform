@@ -29,7 +29,7 @@ const MAIN_NAV = [
 
 const SECONDARY_NAV = [
   { href: "/settings", label: "Settings", icon: Settings },
-  { href: "/help", label: "Help Centre", icon: HelpCircle },
+  { href: "/help", label: "Help Center", icon: HelpCircle },
   { href: "/status", label: "System Status", icon: Activity },
 ] as const;
 

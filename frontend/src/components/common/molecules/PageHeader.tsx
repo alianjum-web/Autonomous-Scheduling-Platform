@@ -24,27 +24,26 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "relative overflow-hidden rounded-2xl dashboard-card",
-        imageKey ? "grid gap-0 lg:grid-cols-[1fr_280px]" : "",
+        "relative overflow-hidden rounded-2xl border border-border/70 bg-linear-to-br from-card via-card to-muted/15",
+        imageKey ? "grid gap-0 md:grid-cols-[1fr_240px] lg:grid-cols-[1fr_300px]" : "",
         className,
       )}
     >
-      <div className="flex flex-col justify-center gap-3 p-6 sm:p-8">
-        {eyebrow ? (
-          <span className="text-xs font-semibold uppercase tracking-widest text-primary">{eyebrow}</span>
-        ) : null}
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
+      <div className="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-primary via-info to-primary/40" />
+
+      <div className="flex flex-col justify-center gap-4 p-6 sm:p-8 lg:p-10">
+        {eyebrow ? <span className="section-eyebrow">{eyebrow}</span> : null}
+        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h1>
         {description ? (
-          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-            {description}
-          </p>
+          <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">{description}</p>
         ) : null}
-        {actions ? <div className="mt-2 flex flex-wrap gap-2">{actions}</div> : null}
+        {actions ? <div className="flex flex-wrap gap-2 pt-1">{actions}</div> : null}
       </div>
+
       {imageKey ? (
-        <div className="relative hidden min-h-[160px] lg:block">
+        <div className="relative hidden min-h-[180px] md:block">
           <ClinicalImage asset={imageKey} variant="header" />
-          <div className="absolute inset-0 bg-linear-to-r from-card via-card/40 to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-r from-card via-card/50 to-transparent" />
         </div>
       ) : null}
     </header>

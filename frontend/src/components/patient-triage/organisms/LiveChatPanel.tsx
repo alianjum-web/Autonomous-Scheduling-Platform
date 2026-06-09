@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect, useCallback, useMemo } from "react";
 import { Bot, MessageCircle, Sparkles } from "lucide-react";
 
 import { useReduxForm } from "@/components/common/hooks/useReduxForm";
@@ -70,7 +70,8 @@ export function LiveChatPanel({ disabled = false }: LiveChatPanelProps) {
   const { startChat, sendMessage } = useStreamingChat();
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const form = useReduxForm<ChatMessageForm>({ message: draftMessage });
+  const formValues = useMemo(() => ({ message: draftMessage }), [draftMessage]);
+  const form = useReduxForm<ChatMessageForm>(formValues);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
