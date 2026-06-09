@@ -10,6 +10,12 @@ from app.services.supabase_client import ping_supabase
 router = APIRouter(tags=["health"])
 
 
+@router.get("/")
+async def root() -> dict[str, str]:
+    """Render and uptime probes often hit `/`; point them at the real health endpoint."""
+    return {"status": "ok", "health": "/health", "ready": "/ready"}
+
+
 @router.get("/health", response_model=HealthResponse)
 async def health_check() -> HealthResponse:
     db_ok = await ping_supabase()

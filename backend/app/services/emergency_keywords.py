@@ -93,10 +93,17 @@ async def load_keywords_from_db() -> None:
     except Exception as exc:
         _active_patterns = list(DEFAULT_PATTERNS)
         _compiled_regex = _compile(_active_patterns)
-        logger.warning(
-            "Failed to load emergency keywords; using defaults",
-            extra={"extra_data": {"error": str(exc)}},
-        )
+        err = str(exc)
+        if "PGRST205" in err or "emergency_keyword_config" in err:
+            logger.info(
+                "emergency_keyword_config not in Supabase yet; using default patterns "
+                "(run backend migrations: npm run db:push from backend/)",
+            )
+        else:
+            logger.warning(
+                "Failed to load emergency keywords; using defaults",
+                extra={"extra_data": {"error": err}},
+            )
 
 
 def get_active_patterns() -> list[str]:

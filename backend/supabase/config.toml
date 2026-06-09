@@ -21,9 +21,6 @@ port = 54322
 shadow_port = 54320
 major_version = 15
 
-[db.migrations]
-enabled = true
-
 [db.seed]
 enabled = false
 sql_paths = ["./seed.sql"]
