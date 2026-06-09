@@ -23,6 +23,7 @@ class AIStatusResponse(BaseModel):
 class HealthChecks(BaseModel):
     database: bool
     redis: bool
+    resend: bool = False
     ai: bool
     ai_provider: str | None = None
     ai_latency_ms: float | None = None

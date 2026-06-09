@@ -12,6 +12,7 @@ import {
   parseTriageStreamMeta,
   parseTriageWebSocketFrame,
 } from "@/lib/api/parsers";
+import { getBaaMessageFromRtkError } from "@/lib/api/rtkErrors";
 import { showToast } from "@/components/ui/toast";
 import { setAvailableSlots, setBookingConfirmed } from "@/components/patient-triage/store/bookingSlice";
 import { useCreateTriageSessionMutation } from "@/components/patient-triage/store/triageApi";
@@ -254,8 +255,9 @@ export function useStreamingChat(): UseStreamingChatReturn {
       dispatch(setError(null));
       const result = await createSession({}).unwrap();
       dispatch(setSessionId(result.session_id));
-    } catch {
-      dispatch(setError("Failed to start chat session."));
+    } catch (err) {
+      const baaMessage = getBaaMessageFromRtkError(err);
+      dispatch(setError(baaMessage ?? "Failed to start chat session."));
     }
   }, [createSession, dispatch]);
 

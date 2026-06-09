@@ -7,7 +7,7 @@
 # project_id is populated by `npm run db:link` (stored in backend/.supabase/).
 # CI uses SUPABASE_PROJECT_REF + SUPABASE_ACCESS_TOKEN (see scripts/db/push.sh).
 
-project_id = "your-project-ref"
+project_id = "houbbjvwfbebgihigzcb"
 
 [api]
 enabled = true
@@ -19,7 +19,7 @@ max_rows = 1000
 [db]
 port = 54322
 shadow_port = 54320
-major_version = 15
+major_version = 17
 
 [db.seed]
 enabled = false

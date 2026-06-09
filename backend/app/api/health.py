@@ -4,6 +4,8 @@ from fastapi import APIRouter
 
 from app.adapters.llm import is_chat_available, probe_provider
 from app.adapters.redis_client import ping_redis
+from app.adapters.resend_client import ping_resend
+from app.core.resend_config import get_resend_config
 from app.core.feature_flags import get_chat_provider, get_feature_flags
 from app.schemas.health import HealthChecks, HealthResponse
 from app.services.supabase_client import ping_supabase
@@ -21,6 +23,7 @@ async def root() -> dict[str, str]:
 async def health_check() -> HealthResponse:
     db_ok = await ping_supabase()
     redis_ok = await ping_redis()
+    resend_ok = await ping_resend() if get_resend_config().configured else False
 
     ai_latency_ms: float | None = None
     ai_ok = True
@@ -46,6 +49,7 @@ async def health_check() -> HealthResponse:
         checks=HealthChecks(
             database=db_ok,
             redis=redis_ok,
+            resend=resend_ok,
             ai=ai_ok,
             ai_provider=ai_provider,
             ai_latency_ms=ai_latency_ms,

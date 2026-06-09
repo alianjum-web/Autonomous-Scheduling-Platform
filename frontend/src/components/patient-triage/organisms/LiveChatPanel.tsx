@@ -110,8 +110,8 @@ export function LiveChatPanel({ disabled = false }: LiveChatPanelProps) {
 
   return (
     <>
-      <div className="flex h-full min-h-[32rem] flex-col dashboard-card overflow-hidden">
-        <header className="space-y-3 border-b border-border/40 bg-gradient-to-r from-primary/5 via-transparent to-info/5 px-4 py-4 sm:px-6">
+      <div className="flex h-full min-h-128 flex-col dashboard-card overflow-hidden">
+        <header className="space-y-3 border-b border-border/40 bg-linear-to-r from-primary/5 via-transparent to-info/5 px-4 py-4 sm:px-6">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">

@@ -1,6 +1,7 @@
 import os
 from functools import lru_cache
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -21,11 +22,20 @@ class Settings(BaseSettings):
     # CORS — restrict to Next.js origin only
     frontend_origin: str = "http://localhost:3000"
 
-    # Supabase
-    supabase_url: str
-    supabase_anon_key: str
-    supabase_service_role_key: str
-    supabase_jwt_secret: str
+    # Supabase — loaded from env / .env (defaults satisfy static analysis; min_length enforces presence)
+    supabase_url: str = Field(default="", min_length=1)
+    supabase_anon_key: str = Field(default="", min_length=1)
+    supabase_service_role_key: str = Field(default="", min_length=1)
+    supabase_jwt_secret: str = Field(default="", min_length=1)
+
+    # Resend — auth emails via Supabase custom SMTP; transactional via adapters/resend_client
+    resend_api_key: str = ""
+    resend_from_email: str = ""
+    resend_from_name: str = "Autonomous Scheduling Platform"
+    resend_smtp_host: str = "smtp.resend.com"
+    resend_smtp_port: int = 465
+    resend_smtp_username: str = "resend"
+    resend_min_interval_seconds: int = 60
 
     # Redis — Upstash (serverless) preferred in production; falls back to local Redis
     upstash_redis_url: str = ""

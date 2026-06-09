@@ -12,7 +12,8 @@
       "intent_classifier_enabled": true
     },
     "compliance": {
-      "baa_enforcement": false
+      "baa_enforcement": false,
+      "$comment": "Dev only — ignored when ENVIRONMENT=production and BAA_ENFORCEMENT=true"
     }
   },
   "providers": {

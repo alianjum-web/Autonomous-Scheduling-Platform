@@ -47,6 +47,7 @@ export const settingsApi = baseApi.injectEndpoints({
     getBAAStatus: builder.query<BAAStatusResponse, void>({
       query: () => "/v1/compliance/baa/status",
       providesTags: ["Compliance"],
+      // All signed-in users need BAA status (patients see block message; admins can fix it).
     }),
     acknowledgeBAA: builder.mutation<BAAAcknowledgeResponse, void>({
       query: () => ({

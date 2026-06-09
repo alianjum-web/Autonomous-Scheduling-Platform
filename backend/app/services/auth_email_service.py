@@ -30,8 +30,15 @@ async def _post_auth(path: str, payload: dict[str, Any]) -> tuple[int, dict[str,
     url = f"{settings.supabase_url.rstrip('/')}/auth/v1/{path}"
     headers = _auth_headers(settings.supabase_anon_key)
 
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        response = await client.post(url, json=payload, headers=headers)
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.post(url, json=payload, headers=headers)
+    except httpx.HTTPError as exc:
+        logger.error(
+            "Supabase auth request failed",
+            extra={"extra_data": {"path": path, "error": str(exc)}},
+        )
+        return 503, None, "Auth service unavailable. Check backend Supabase configuration."
 
     body: dict[str, Any] | None = None
     try:

@@ -8,7 +8,9 @@ import { useAuthSession } from "@/components/common/hooks/useAuthSession";
 import { LoadingScreen } from "@/components/common/molecules/LoadingScreen";
 import { PageShell } from "@/components/common/layout/PageShell";
 import { AccessGate } from "@/components/common/molecules/AccessGate";
+import { BAAComplianceBanner } from "@/components/common/molecules/BAAComplianceBanner";
 import { PageHeader } from "@/components/common/molecules/PageHeader";
+import { useGetBAAStatusQuery } from "@/components/common/store/settingsApi";
 import { useAppDispatch, useAppSelector } from "@/components/common/store/hooks";
 import {
   selectClinicDocsUi,
@@ -41,6 +43,8 @@ export function ClinicDocsScreen() {
   const documents = useAppSelector(selectDocuments);
   const selectedDoc = useAppSelector(selectSelectedDoc);
   const ui = useAppSelector(selectClinicDocsUi);
+  const { data: baa } = useGetBAAStatusQuery(undefined, { skip: !isAdmin });
+  const docsBlocked = Boolean(baa && !baa.ai_features_available);
 
   useEffect(() => {
     if (data?.documents) {
@@ -83,8 +87,11 @@ export function ClinicDocsScreen() {
         imageKey="docs"
       />
 
+      <BAAComplianceBanner context="docs" />
+
       <section className="grid gap-6 md:grid-cols-2">
         <DocumentUploader
+          disabled={docsBlocked}
           onUploaded={(jobId) => {
             dispatch(setActiveJobId(jobId));
             refetch();

@@ -1,10 +1,16 @@
 /** HIPAA compliance API contracts (FastAPI /v1/compliance/*). */
 
 export interface BAAStatusResponse {
-  baa_signed: boolean;
   tenant_id: string;
+  baa_signed: boolean;
+  signed_at: string | null;
+  /** When true, unsigned clinics cannot use AI triage or document embedding. */
+  enforcement_enabled: boolean;
+  environment: string;
+  /** True when BAA is signed OR enforcement is off (e.g. local dev). */
+  ai_features_available: boolean;
 }
 
 export interface BAAAcknowledgeResponse extends BAAStatusResponse {
-  signed_at?: string;
+  message?: string;
 }

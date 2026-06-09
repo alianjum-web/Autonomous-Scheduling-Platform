@@ -124,6 +124,30 @@ class SupabaseService:
 
         return await self._run(_update)
 
+    async def insert_audit_log(
+        self,
+        *,
+        tenant_id: str,
+        action: str,
+        resource_type: str,
+        resource_id: str,
+        actor_id: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        row = {
+            "tenant_id": tenant_id,
+            "actor_id": actor_id,
+            "action": action,
+            "resource_type": resource_type,
+            "resource_id": resource_id,
+            "metadata": metadata or {},
+        }
+
+        def _insert() -> None:
+            self.get_client().table("audit_logs").insert(row).execute()
+
+        await self._run(_insert)
+
     # ── Patient sessions ──────────────────────────────────────────────────────
 
     async def create_patient_session(
@@ -563,6 +587,7 @@ warm_supabase_pool = supabase_service.warm_pool
 ping_supabase = supabase_service.ping
 get_tenant = supabase_service.get_tenant
 acknowledge_tenant_baa = supabase_service.acknowledge_tenant_baa
+insert_audit_log = supabase_service.insert_audit_log
 get_supabase_client = supabase_service.get_client
 
 create_patient_session = supabase_service.create_patient_session

@@ -13,7 +13,7 @@ from app.schemas.triage import (
     TriageMessageRequest,
 )
 from app.services import triage_service
-from app.services.compliance import require_tenant_baa
+from app.services.compliance import BAARequiredError, require_tenant_baa
 from app.services.triage_service import RateLimitExceededError, TriageConnection
 
 router = APIRouter(prefix="/triage", tags=["triage"])
@@ -57,6 +57,7 @@ async def stream_triage(
     request: Request,
     tenant_id: str = Depends(get_tenant_id),
 ):
+    await require_tenant_baa(tenant_id)
     session = await triage_service.get_session(session_id, tenant_id)
     stream = triage_service.stream_greeting_sse(session_id, tenant_id, session.get("message_history"))
     return sse_response(request, stream)
@@ -91,6 +92,13 @@ async def triage_websocket(websocket: WebSocket, session_id: str):
 
             message = data.get("message", "")
             history = triage_service.parse_message_history(data.get("history"), connection.session)
+
+            try:
+                await require_tenant_baa(connection.tenant_id)
+            except BAARequiredError as exc:
+                await websocket.send_json({"error": "baa_required", "detail": str(exc)})
+                await websocket.close(code=4003)
+                return
 
             try:
                 async for payload in triage_service.stream_websocket_turn(

@@ -7,8 +7,11 @@
 #   npm run db:link -- --project-ref <your-project-ref>
 #   npm run gen:types
 #
+# Supabase CLI v2.100+ may require your database password for type generation:
+#   SUPABASE_DB_PASSWORD='<db-password>' npm run gen:types
+#
 # CI / non-interactive:
-#   SUPABASE_ACCESS_TOKEN=<token> SUPABASE_PROJECT_REF=<ref> npm run gen:types
+#   SUPABASE_ACCESS_TOKEN=<token> SUPABASE_PROJECT_REF=<ref> SUPABASE_DB_PASSWORD=<pw> npm run gen:types
 
 set -euo pipefail
 
@@ -31,27 +34,86 @@ run_gen_types() {
   asp_run_supabase gen types typescript "$@"
 }
 
-# shellcheck disable=SC2086
-if run_gen_types --linked >"$TMP" 2>/dev/null; then
+write_types() {
+  local label="$1"
   printf '%s' "$HEADER" >"$OUT"
   cat "$TMP" >>"$OUT"
-  echo "Wrote $OUT (from linked project)"
-elif [[ -n "${SUPABASE_PROJECT_REF:-}" ]]; then
+  echo "Wrote $OUT ($label)"
+}
+
+asp_read_project_ref() {
+  if [[ -n "${SUPABASE_PROJECT_REF:-}" ]]; then
+    echo "$SUPABASE_PROJECT_REF"
+    return
+  fi
+
+  local ref_file="$ASP_BACKEND/supabase/.temp/project-ref"
+  if [[ -f "$ref_file" ]]; then
+    tr -d '[:space:]' <"$ref_file"
+    return
+  fi
+
+  local config="$ASP_BACKEND/supabase/config.toml"
+  if [[ -f "$config" ]]; then
+    local id
+    id="$(grep -E '^project_id\s*=' "$config" | sed -E 's/^project_id\s*=\s*"([^"]+)".*/\1/' || true)"
+    if [[ -n "$id" && "$id" != "your-project-ref" ]]; then
+      echo "$id"
+    fi
+  fi
+}
+
+asp_build_db_url() {
+  local pooler_file="$ASP_BACKEND/supabase/.temp/pooler-url"
+  if [[ -z "${SUPABASE_DB_PASSWORD:-}" || ! -f "$pooler_file" ]]; then
+    return 1
+  fi
+
+  local template
+  template="$(tr -d '[:space:]' <"$pooler_file")"
+  echo "${template//\[YOUR-PASSWORD\]/$SUPABASE_DB_PASSWORD}"
+}
+
+PROJECT_REF="$(asp_read_project_ref || true)"
+
+# Newer Supabase CLI reads this when using --linked / --project-id.
+if [[ -n "${SUPABASE_DB_PASSWORD:-}" ]]; then
+  export SUPABASE_DB_PASSWORD
+fi
+
+if run_gen_types --linked >"$TMP" 2>/dev/null; then
+  write_types "from linked project"
+  exit 0
+fi
+
+DB_URL="$(asp_build_db_url || true)"
+if [[ -n "$DB_URL" ]]; then
+  if run_gen_types --db-url "$DB_URL" >"$TMP" 2>/dev/null; then
+    write_types "from database URL"
+    exit 0
+  fi
+fi
+
+if [[ -n "$PROJECT_REF" ]]; then
   if [[ -n "${SUPABASE_ACCESS_TOKEN:-}" ]]; then
-    link_args=(link --project-ref "$SUPABASE_PROJECT_REF")
+    link_args=(link --project-ref "$PROJECT_REF")
     if [[ -n "${SUPABASE_DB_PASSWORD:-}" ]]; then
       link_args+=(--password "$SUPABASE_DB_PASSWORD")
     fi
-    asp_run_supabase "${link_args[@]}" >/dev/null
+    asp_run_supabase "${link_args[@]}" >/dev/null 2>&1 || true
   fi
-  # shellcheck disable=SC2086
-  run_gen_types --project-id "$SUPABASE_PROJECT_REF" >"$TMP"
-  printf '%s' "$HEADER" >"$OUT"
-  cat "$TMP" >>"$OUT"
-  echo "Wrote $OUT (project $SUPABASE_PROJECT_REF)"
-else
-  echo "WARN: No linked project and SUPABASE_PROJECT_REF unset." >&2
-  echo "      Keeping existing types at $OUT" >&2
-  echo "      Run: npm run db:link -- --project-ref <ref>  then npm run gen:types" >&2
-  exit 0
+
+  if run_gen_types --project-id "$PROJECT_REF" >"$TMP" 2>/dev/null; then
+    write_types "project $PROJECT_REF"
+    exit 0
+  fi
 fi
+
+echo "WARN: Could not generate types (linked project, db-url, and project-id all failed)." >&2
+echo "      Keeping existing types at $OUT" >&2
+if [[ -z "${SUPABASE_DB_PASSWORD:-}" ]]; then
+  echo "      Try: SUPABASE_DB_PASSWORD='<your-db-password>' npm run gen:types" >&2
+else
+  echo "      Verify: npx supabase login  &&  npm run db:link -- --project-ref <ref>" >&2
+fi
+exit 0

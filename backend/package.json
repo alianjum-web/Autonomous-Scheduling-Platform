@@ -27,9 +27,10 @@
     "db:push": "bash ../scripts/db/push.sh",
     "db:migration:new": "supabase migration new",
     "db:migration:list": "supabase migration list",
-    "gen:types": "bash ../scripts/gen-supabase-types.sh"
+    "gen:types": "bash ../scripts/gen-supabase-types.sh",
+    "resend:smtp": "python3 scripts/print_resend_smtp.py"
   },
   "devDependencies": {
-    "supabase": "2.20.0"
+    "supabase": "2.105.0"
   }
 }

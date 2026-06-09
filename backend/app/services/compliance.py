@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from app.core.config import get_settings
 from app.core.feature_flags import get_feature_flags
+from app.schemas.compliance import BAAStatusResponse
 from app.services import supabase_client
 
 
@@ -12,11 +13,23 @@ class BAARequiredError(Exception):
 
 
 def baa_enforcement_enabled() -> bool:
+    """Production always enforces when BAA_ENFORCEMENT=true (see .env.production).
+
+    Development can disable via feature-flags.json ``compliance.baa_enforcement: false``.
+    Master kill-switch: set BAA_ENFORCEMENT=false in environment.
+    """
+    settings = get_settings()
+    if not settings.baa_enforcement:
+        return False
+
+    if settings.environment == "production":
+        return True
+
     flags = get_feature_flags()
     compliance = flags.features.compliance
     if compliance is not None:
         return compliance.baa_enforcement
-    return get_settings().baa_enforcement
+    return True
 
 
 async def tenant_has_baa(tenant_id: str) -> bool:
@@ -24,6 +37,22 @@ async def tenant_has_baa(tenant_id: str) -> bool:
     if tenant is None:
         return False
     return tenant.get("hipaa_baa_signed_at") is not None
+
+
+async def get_baa_status(tenant_id: str) -> BAAStatusResponse:
+    settings = get_settings()
+    enforcement = baa_enforcement_enabled()
+    signed = await tenant_has_baa(tenant_id)
+    tenant = await supabase_client.get_tenant(tenant_id)
+    signed_at = tenant.get("hipaa_baa_signed_at") if tenant else None
+    return BAAStatusResponse(
+        tenant_id=tenant_id,
+        baa_signed=signed,
+        signed_at=str(signed_at) if signed_at else None,
+        enforcement_enabled=enforcement,
+        environment=settings.environment,
+        ai_features_available=signed or not enforcement,
+    )
 
 
 async def require_tenant_baa(tenant_id: str) -> None:
@@ -37,4 +66,13 @@ async def require_tenant_baa(tenant_id: str) -> None:
 
 
 async def acknowledge_tenant_baa(tenant_id: str, user_id: str) -> dict:
-    return await supabase_client.acknowledge_tenant_baa(tenant_id, user_id)
+    tenant = await supabase_client.acknowledge_tenant_baa(tenant_id, user_id)
+    await supabase_client.insert_audit_log(
+        tenant_id=tenant_id,
+        actor_id=user_id,
+        action="baa_acknowledged",
+        resource_type="tenant",
+        resource_id=tenant_id,
+        metadata={"hipaa_baa_signed_at": tenant.get("hipaa_baa_signed_at")},
+    )
+    return tenant

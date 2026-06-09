@@ -5,6 +5,7 @@ export type PlatformHealthStatus = "healthy" | "degraded";
 export interface HealthChecks {
   database: boolean;
   redis: boolean;
+  resend?: boolean;
   ai: boolean;
   ai_provider: string | null;
   ai_latency_ms: number | null;

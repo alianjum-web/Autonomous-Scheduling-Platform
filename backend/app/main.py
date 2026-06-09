@@ -12,11 +12,14 @@ from app.api.health import router as health_router
 from app.api.metrics import router as metrics_router
 from app.api.v1.router import api_router
 from app.core.config import get_settings
-from app.core.logger import setup_logging
+from app.core.logger import get_logger, setup_logging
+from app.core.resend_config import get_resend_config
 from app.core.sentry import init_sentry
 from app.core.tracing import RequestTracingMiddleware
 from app.services.agent import warm_triage_graph
 from app.services.supabase_client import warm_supabase_pool
+
+_logger = get_logger(__name__)
 
 limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
 
@@ -28,6 +31,17 @@ async def lifespan(_app: FastAPI):
     init_sentry(settings.sentry_dsn, settings.environment)
     await warm_supabase_pool()
     await warm_triage_graph()
+    resend = get_resend_config()
+    if resend.configured:
+        _logger.info(
+            "Resend configured",
+            extra={"extra_data": {"from_email": resend.from_email, "smtp_host": resend.smtp_host}},
+        )
+    else:
+        _logger.warning(
+            "Resend not configured — set RESEND_API_KEY and RESEND_FROM_EMAIL; "
+            "paste SMTP into Supabase → Authentication → Emails"
+        )
     yield
 
 

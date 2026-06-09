@@ -1,7 +1,7 @@
 # Autonomous Scheduling Platform — dev / prod commands
 # Run `make help` to see all targets.
 
-.PHONY: help env-dev env-prod dev prod dev-api prod-api stop test lint db-validate db-push db-link
+.PHONY: help env-dev env-prod dev prod dev-api prod-api stop test lint db-validate db-push db-link resend-smtp
 
 help:
 	@echo "Environment"
@@ -17,6 +17,7 @@ help:
 	@echo "  make prod-api    API only — production docker compose"
 	@echo ""
 	@echo "Utilities"
+	@echo "  make resend-smtp Print Resend SMTP values for Supabase dashboard"
 	@echo "  make stop        Stop docker services"
 	@echo "  make test        Run backend + frontend tests"
 	@echo "  make lint        Run frontend eslint"
@@ -31,6 +32,9 @@ env-dev:
 
 env-prod:
 	@./scripts/env/sync.sh production
+
+resend-smtp:
+	@cd backend && python3 scripts/print_resend_smtp.py
 
 dev-api:
 	docker compose up --build

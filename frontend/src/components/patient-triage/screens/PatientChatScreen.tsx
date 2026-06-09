@@ -7,6 +7,8 @@ import { Bot, Lock } from "lucide-react";
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
 import { PageShell } from "@/components/common/layout/PageShell";
 import { PageHeader } from "@/components/common/molecules/PageHeader";
+import { BAAComplianceBanner } from "@/components/common/molecules/BAAComplianceBanner";
+import { useGetBAAStatusQuery } from "@/components/common/store/settingsApi";
 import { LiveChatPanel } from "@/components/patient-triage/organisms/LiveChatPanel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,6 +17,8 @@ export function PatientChatScreen() {
   const searchParams = useSearchParams();
   const staffNotice = searchParams.get("notice") === "staff_only";
   const { session, loading } = useAuthSession();
+  const { data: baa } = useGetBAAStatusQuery(undefined, { skip: !session });
+  const chatBlocked = Boolean(session && baa && !baa.ai_features_available);
 
   return (
     <PageShell maxWidth="2xl" className="flex flex-1 flex-col gap-6 pb-12">
@@ -61,8 +65,10 @@ export function PatientChatScreen() {
         </Card>
       ) : null}
 
+      {session ? <BAAComplianceBanner context="chat" /> : null}
+
       <div className="hero-glow overflow-hidden rounded-2xl">
-        <LiveChatPanel disabled={!loading && !session} />
+        <LiveChatPanel disabled={(!loading && !session) || chatBlocked} />
       </div>
 
       <p className="flex items-center justify-center gap-2 text-center text-xs text-muted-foreground">

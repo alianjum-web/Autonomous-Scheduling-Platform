@@ -5,7 +5,10 @@ import { Activity, CheckCircle2, Database, RefreshCw, Server, XCircle } from "lu
 import { PageShell } from "@/components/common/layout/PageShell";
 import { PageHeader } from "@/components/common/molecules/PageHeader";
 import { SectionHeading } from "@/components/common/molecules/SectionHeading";
+import { BAAComplianceBanner } from "@/components/common/molecules/BAAComplianceBanner";
+import { useAuthSession } from "@/components/common/hooks/useAuthSession";
 import { useGetAIStatusQuery, useGetHealthQuery } from "@/components/common/store/healthApi";
+import { useGetBAAStatusQuery } from "@/components/common/store/settingsApi";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -38,6 +41,8 @@ function StatusRow({
 
 export function StatusScreen() {
   const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+  const { session } = useAuthSession();
+  const { data: baa } = useGetBAAStatusQuery(undefined, { skip: !session });
   const { data: health, isLoading, isFetching, error, refetch } = useGetHealthQuery();
   const {
     data: aiStatus,
@@ -106,10 +111,25 @@ export function StatusScreen() {
                       : "Not configured"
                 }
               />
+              {baa ? (
+                <StatusRow
+                  label="HIPAA BAA (tenant)"
+                  ok={baa.ai_features_available}
+                  detail={
+                    baa.baa_signed
+                      ? `Signed · ${baa.enforcement_enabled ? "enforced" : "dev mode"}`
+                      : baa.enforcement_enabled
+                        ? "Unsigned — AI blocked"
+                        : "Unsigned — enforcement off"
+                  }
+                />
+              ) : null}
             </>
           ) : null}
         </CardContent>
       </Card>
+
+      {session ? <BAAComplianceBanner context="status" /> : null}
 
       {aiStatus ? (
         <Card>

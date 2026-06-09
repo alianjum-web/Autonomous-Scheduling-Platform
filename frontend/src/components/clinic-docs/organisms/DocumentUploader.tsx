@@ -43,9 +43,10 @@ interface UploadFormValues {
 
 interface DocumentUploaderProps {
   onUploaded?: (jobId: string) => void;
+  disabled?: boolean;
 }
 
-export function DocumentUploader({ onUploaded }: DocumentUploaderProps) {
+export function DocumentUploader({ onUploaded, disabled = false }: DocumentUploaderProps) {
   const dispatch = useAppDispatch();
   const inputRef = useRef<HTMLInputElement>(null);
   const uploadForm = useAppSelector(selectUploadForm);
@@ -103,6 +104,7 @@ export function DocumentUploader({ onUploaded }: DocumentUploaderProps) {
             type="button"
             variant="outline"
             className="mt-4"
+            disabled={disabled}
             onClick={() => inputRef.current?.click()}
           >
             Browse files
@@ -112,6 +114,7 @@ export function DocumentUploader({ onUploaded }: DocumentUploaderProps) {
             type="file"
             accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             className="hidden"
+            disabled={disabled}
             onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
           />
         </div>
@@ -126,6 +129,7 @@ export function DocumentUploader({ onUploaded }: DocumentUploaderProps) {
                   <button
                     key={c.value}
                     type="button"
+                    disabled={disabled}
                     onClick={() => {
                       field.onChange(c.value);
                       dispatch(setUploadCategory(c.value));
@@ -156,7 +160,7 @@ export function DocumentUploader({ onUploaded }: DocumentUploaderProps) {
               sizeLabel={formatBytes(uploadForm.pendingFileSize)}
               onRemove={() => clearStagedFile()}
             />
-            <Button type="submit" disabled={isUploading}>
+            <Button type="submit" disabled={disabled || isUploading}>
               {isUploading ? "Uploading…" : "Start Ingestion"}
             </Button>
           </div>
