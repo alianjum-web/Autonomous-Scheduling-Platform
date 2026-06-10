@@ -1,7 +1,7 @@
 import os
 from functools import lru_cache
 
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -91,6 +91,30 @@ class Settings(BaseSettings):
     baa_enforcement: bool = True
 
 
+_SETTINGS_HINTS: dict[str, str] = {
+    "supabase_url": "Set SUPABASE_URL on Render (Supabase project URL).",
+    "supabase_anon_key": (
+        "Set SUPABASE_ANON_KEY on Render — same publishable key as "
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY on Vercel (Supabase → Settings → API Keys)."
+    ),
+    "supabase_service_role_key": "Set SUPABASE_SERVICE_ROLE_KEY on Render.",
+    "supabase_jwt_secret": "Set SUPABASE_JWT_SECRET on Render.",
+}
+
+
+def _format_settings_error(exc: ValidationError) -> str:
+    lines = ["Backend configuration is incomplete:"]
+    for err in exc.errors():
+        field = str(err["loc"][0]) if err.get("loc") else "settings"
+        hint = _SETTINGS_HINTS.get(field, f"Invalid or missing value for {field}.")
+        lines.append(f"  • {hint}")
+    lines.append("Render → your service → Environment → add the variables → Save → Manual Deploy.")
+    return "\n".join(lines)
+
+
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    try:
+        return Settings()
+    except ValidationError as exc:
+        raise RuntimeError(_format_settings_error(exc)) from exc
