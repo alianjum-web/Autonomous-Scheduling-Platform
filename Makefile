@@ -5,8 +5,8 @@
 
 help:
 	@echo "Environment"
-	@echo "  make env-dev     Copy .env.development → active env files"
-	@echo "  make env-prod    Copy .env.production  → active env files"
+	@echo "  make env-dev     Show active env files (development)"
+	@echo "  make env-prod    Show active env files (production)"
 	@echo ""
 	@echo "Development (hot-reload)"
 	@echo "  make dev         Redis + API (docker) + Next.js dev server"
@@ -39,7 +39,7 @@ resend-smtp:
 dev-api:
 	docker compose up --build
 
-dev: env-dev
+dev:
 	@echo "Starting development stack..."
 	-docker compose up --build -d redis api
 	@cd frontend && npm run dev
@@ -47,7 +47,7 @@ dev: env-dev
 prod-api:
 	docker compose -f docker-compose.prod.yml up --build
 
-prod: env-prod
+prod:
 	@echo "Starting production simulation..."
 	docker compose -f docker-compose.prod.yml up --build -d redis api
 	@cd frontend && npm run prod

@@ -4,12 +4,10 @@
   "private": true,
   "description": "Next.js patient intake UI — run from frontend/ folder",
   "scripts": {
-    "env:dev": "cp .env.development .env.local",
-    "env:prod": "cp .env.production .env.local",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "prod": "npm run env:prod && next build && next start -p 3100",
+    "prod": "next build && next start -p 3100",
     "lint": "eslint",
     "type-check": "tsc --noEmit",
     "test": "vitest run",

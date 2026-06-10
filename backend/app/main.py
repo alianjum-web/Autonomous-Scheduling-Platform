@@ -56,7 +56,7 @@ def create_app() -> FastAPI:
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[settings.frontend_origin],
+        allow_origins=[settings.frontend_origin],  # normalized — must match browser Origin exactly
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

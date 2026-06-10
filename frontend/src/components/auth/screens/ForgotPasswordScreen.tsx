@@ -5,7 +5,6 @@ import { useState } from "react";
 
 import { AuthErrorBanner } from "@/components/auth/atoms/AuthErrorBanner";
 import { AuthSubmitButton } from "@/components/auth/atoms/AuthSubmitButton";
-import { useAuthEmailCooldown } from "@/components/auth/hooks/useAuthEmailCooldown";
 import { AuthLayout } from "@/components/auth/layout/AuthLayout";
 import { AuthEmailField } from "@/components/auth/molecules/AuthEmailField";
 import { useLocalForm } from "@/components/common/hooks/useLocalForm";
@@ -22,12 +21,7 @@ export function ForgotPasswordScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const form = useLocalForm<ForgotPasswordFormValues>({ email: "" });
-  const email = form.watch("email");
-  const { secondsLeft, canSend, startCooldown } = useAuthEmailCooldown("recover", email);
-
   const onSubmit = form.handleSubmit(async ({ email: submittedEmail }) => {
-    if (!canSend) return;
-
     setError(null);
     setLoading(true);
 
@@ -36,17 +30,11 @@ export function ForgotPasswordScreen() {
         submittedEmail,
         `${window.location.origin}/auth/callback?next=/reset-password`,
       );
-      startCooldown();
       captureAuthEmailEvent("recover", "sent", submittedEmail);
       setSent(true);
     } catch (err) {
       if (err instanceof AuthEmailApiError) {
-        if (err.retryAfterSeconds > 0) {
-          startCooldown(err.retryAfterSeconds);
-          captureAuthEmailEvent("recover", "rate_limited", submittedEmail);
-        } else {
-          captureAuthEmailEvent("recover", "failed", submittedEmail);
-        }
+        captureAuthEmailEvent("recover", err.retryAfterSeconds > 0 ? "rate_limited" : "failed", submittedEmail);
         setError(err.message);
       } else {
         captureAuthEmailEvent("recover", "failed", submittedEmail);
@@ -71,12 +59,8 @@ export function ForgotPasswordScreen() {
           <form onSubmit={onSubmit} className="space-y-5">
             <AuthEmailField control={form.control} name="email" />
             {error ? <AuthErrorBanner message={error} /> : null}
-            <AuthSubmitButton
-              loading={loading}
-              loadingLabel="Sending…"
-              disabled={!canSend}
-            >
-              {secondsLeft > 0 ? `Send again in ${secondsLeft}s` : "Send reset link"}
+            <AuthSubmitButton loading={loading} loadingLabel="Sending…">
+              Send reset link
             </AuthSubmitButton>
           </form>
         </Form>

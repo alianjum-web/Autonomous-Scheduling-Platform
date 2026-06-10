@@ -32,12 +32,13 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env — templates committed; secrets go in .env.local or Vercel env vars
+# Legacy overrides (not used)
 .env
 .env.local
-.env.production
 .env.*.local
-!.env.development
+# Local env files (gitignored — copy from .env.example)
+.env.development
+.env.production
 !.env.example
 
 # vercel

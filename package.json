@@ -9,13 +9,13 @@
 
     "setup": "npm install --prefix frontend && npm install --prefix backend && npm run setup --prefix backend",
 
-    "dev": "npm run env:dev && npm run dev:backend:detached && npm run dev:frontend",
+    "dev": "npm run dev:backend:detached && npm run dev:frontend",
     "dev:frontend": "npm run dev --prefix frontend",
     "dev:backend": "npm run docker:dev --prefix backend",
     "dev:backend:detached": "npm run docker:dev:detached --prefix backend",
     "dev:backend:local": "npm run dev --prefix backend",
 
-    "prod": "npm run env:prod && npm run prod:backend:detached && npm run prod:frontend",
+    "prod": "npm run prod:backend:detached && npm run prod:frontend",
     "prod:frontend": "npm run prod --prefix frontend",
     "prod:backend": "npm run docker:prod --prefix backend",
     "prod:backend:detached": "npm run docker:prod:detached --prefix backend",

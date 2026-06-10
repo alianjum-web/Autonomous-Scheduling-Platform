@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Print Resend SMTP values for Supabase dashboard (reads backend/.env, no deps)."""
+"""Print Resend SMTP values for Supabase dashboard (reads backend/.env.development, no deps)."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_ENV = BACKEND_ROOT / ".env"
+DEFAULT_ENV = BACKEND_ROOT / ".env.development"
 
 DEFAULTS = {
     "RESEND_FROM_NAME": "Autonomous Scheduling Platform",
@@ -66,7 +66,7 @@ def main() -> None:
     print(f"Min interval per user:  {min_interval}s")
     print()
     if not api_key or not from_email:
-        print("⚠ Missing RESEND_API_KEY or RESEND_FROM_EMAIL in backend/.env")
+        print("⚠ Missing RESEND_API_KEY or RESEND_FROM_EMAIL in backend/.env.development")
         sys.exit(1)
     print("Copy the values above into:")
     print("Supabase → Authentication → Emails → SMTP Settings")

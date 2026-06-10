@@ -7,7 +7,6 @@ import { Mail, RefreshCw } from "lucide-react";
 
 import { AuthErrorBanner } from "@/components/auth/atoms/AuthErrorBanner";
 import { AuthSuccessBanner } from "@/components/auth/atoms/AuthSuccessBanner";
-import { useAuthEmailCooldown } from "@/components/auth/hooks/useAuthEmailCooldown";
 import { AuthLayout } from "@/components/auth/layout/AuthLayout";
 import { Button } from "@/components/ui/button";
 import { captureAuthEmailEvent } from "@/lib/auth/captureAuthEmailEvent";
@@ -19,14 +18,11 @@ export function VerifyEmailScreen() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const { secondsLeft, canSend, startCooldown } = useAuthEmailCooldown("resend", email);
-
   const handleResend = async () => {
     if (!email) {
       setError("No email address on file. Please sign up again.");
       return;
     }
-    if (!canSend) return;
 
     setLoading(true);
     setError(null);
@@ -37,17 +33,11 @@ export function VerifyEmailScreen() {
         email,
         `${window.location.origin}/auth/callback?next=/onboarding`,
       );
-      startCooldown();
       captureAuthEmailEvent("resend", "sent", email);
       setMessage(successMessage);
     } catch (err) {
       if (err instanceof AuthEmailApiError) {
-        if (err.retryAfterSeconds > 0) {
-          startCooldown(err.retryAfterSeconds);
-          captureAuthEmailEvent("resend", "rate_limited", email);
-        } else {
-          captureAuthEmailEvent("resend", "failed", email);
-        }
+        captureAuthEmailEvent("resend", err.retryAfterSeconds > 0 ? "rate_limited" : "failed", email);
         setError(err.message);
       } else {
         captureAuthEmailEvent("resend", "failed", email);
@@ -58,11 +48,7 @@ export function VerifyEmailScreen() {
     }
   };
 
-  const resendLabel = loading
-    ? "Sending…"
-    : secondsLeft > 0
-      ? `Resend in ${secondsLeft}s`
-      : "Resend confirmation email";
+  const resendLabel = loading ? "Sending…" : "Resend confirmation email";
 
   return (
     <AuthLayout
@@ -94,7 +80,7 @@ export function VerifyEmailScreen() {
           <Button
             className="h-11 w-full gap-2 shadow-md"
             onClick={handleResend}
-            disabled={loading || !email || !canSend}
+            disabled={loading || !email}
           >
             <RefreshCw className="size-4" aria-hidden />
             {resendLabel}

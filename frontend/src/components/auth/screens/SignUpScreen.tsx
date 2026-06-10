@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 
 import { AuthErrorBanner } from "@/components/auth/atoms/AuthErrorBanner";
 import { AuthSubmitButton } from "@/components/auth/atoms/AuthSubmitButton";
-import { useAuthEmailCooldown } from "@/components/auth/hooks/useAuthEmailCooldown";
 import { useAuthSubmitState } from "@/components/auth/hooks/useAuthSubmitState";
 import { validatePasswordPair } from "@/components/auth/hooks/validatePasswordPair";
 import { AuthLayout } from "@/components/auth/layout/AuthLayout";
@@ -34,11 +33,7 @@ export function SignUpScreen() {
     password: "12345678",
     confirmPassword: "12345678",
   });
-  const email = form.watch("email");
-  const { secondsLeft, canSend, startCooldown } = useAuthEmailCooldown("signup", email);
-
   const onSubmit = form.handleSubmit(async ({ fullName, email: submittedEmail, password, confirmPassword }) => {
-    if (!canSend) return;
     clearMessages();
 
     const passwordError = validatePasswordPair(password, confirmPassword);
@@ -55,22 +50,16 @@ export function SignUpScreen() {
         fullName,
         emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
       });
-      startCooldown();
       captureAuthEmailEvent("signup", "sent", submittedEmail);
       router.push(`/verify-email?email=${encodeURIComponent(submittedEmail)}`);
     } catch (err) {
       if (err instanceof AuthEmailApiError) {
-        if (err.retryAfterSeconds > 0) {
-          startCooldown(err.retryAfterSeconds);
-          captureAuthEmailEvent("signup", "rate_limited", submittedEmail);
-        } else {
-          captureAuthEmailEvent("signup", "failed", submittedEmail);
-        }
+        captureAuthEmailEvent("signup", err.retryAfterSeconds > 0 ? "rate_limited" : "failed", submittedEmail);
         setSubmitError(err.message);
       } else {
         captureAuthEmailEvent("signup", "failed", submittedEmail);
         setSubmitError(
-          "Unable to reach the API. Check NEXT_PUBLIC_API_URL and that the backend is running.",
+          err instanceof Error ? err.message : "Unable to reach the API. Please try again.",
         );
       }
     } finally {
@@ -117,8 +106,8 @@ export function SignUpScreen() {
 
           {submitError ? <AuthErrorBanner message={submitError} /> : null}
 
-          <AuthSubmitButton loading={loading} loadingLabel="Creating account…" disabled={!canSend}>
-            {secondsLeft > 0 ? `Try again in ${secondsLeft}s` : "Create account"}
+          <AuthSubmitButton loading={loading} loadingLabel="Creating account…">
+            Create account
           </AuthSubmitButton>
         </form>
       </Form>

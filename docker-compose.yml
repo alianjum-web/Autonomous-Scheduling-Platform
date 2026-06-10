@@ -1,8 +1,7 @@
 services:
   redis:
     image: redis:8-alpine
-    ports:
-      - "6379:6379"
+    # No host port — avoids conflict with system Redis on :6379; API uses redis://redis:6379
     volumes:
       - redis_data:/data
 
@@ -12,7 +11,7 @@ services:
     ports:
       - "8000:8000"
     env_file:
-      - ./backend/.env
+      - ./backend/.env.development
     environment:
       ENVIRONMENT: development
       DEBUG: "true"

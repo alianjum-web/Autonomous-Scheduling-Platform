@@ -16,12 +16,13 @@ __pycache__/
 htmlcov/
 coverage.xml
 
-# Active env (gitignored); .env.example / .env.development are committed templates
+# Legacy overrides (not used)
 .env
 .env.local
-.env.production
 .env.*.local
-!.env.development
+# Production secrets (gitignored)
+.env.production
+.env.development
 !.env.example
 
 # LangGraph runtime checkpoint

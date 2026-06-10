@@ -24,16 +24,19 @@ Desktop.ini
 .cursor/
 
 # ── Secrets & environment ───────────────────────────────────────────────────
-# Never commit secrets — use .env.local (local) or platform dashboards (prod)
+# Legacy / override files (not used — edit .env.development or .env.production instead)
 .env
 .env.local
-.env.production
 .env.*.local
 
-# Committed templates (placeholders only)
-!.env.development
+# Env files with secrets (gitignored — use .env.example as the committed template)
+.env.development
+.env.production
+**/.env.development
+**/.env.production
+
+# Committed env templates
 !.env.example
-!**/.env.development
 !**/.env.example
 
 # Keys & certificates

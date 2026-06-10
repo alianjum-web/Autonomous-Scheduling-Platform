@@ -1,12 +1,18 @@
 import os
 from functools import lru_cache
 
-from pydantic import AliasChoices, Field, ValidationError
+from pydantic import AliasChoices, Field, ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 def _resolve_env_file() -> str:
-    return os.environ.get("ENV_FILE", ".env")
+    """Load backend/.env.development or backend/.env.production (no .env copy step)."""
+    if override := os.environ.get("ENV_FILE"):
+        return override
+    mode = os.environ.get("APP_ENV") or os.environ.get("ENVIRONMENT") or "development"
+    if str(mode).strip().lower() == "production":
+        return ".env.production"
+    return ".env.development"
 
 
 class Settings(BaseSettings):
@@ -20,8 +26,13 @@ class Settings(BaseSettings):
     app_name: str = "Autonomous Scheduling Platform"
     debug: bool = False
 
-    # CORS — restrict to Next.js origin only
+    # CORS — restrict to Next.js origin only (no trailing slash; browsers omit it on Origin header)
     frontend_origin: str = "http://localhost:3000"
+
+    @field_validator("frontend_origin")
+    @classmethod
+    def _normalize_frontend_origin(cls, value: str) -> str:
+        return value.strip().rstrip("/")
 
     # Supabase — loaded from env / .env (defaults satisfy static analysis; min_length enforces presence)
     supabase_url: str = Field(default="", min_length=1)

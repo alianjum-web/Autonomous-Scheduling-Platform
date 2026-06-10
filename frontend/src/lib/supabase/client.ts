@@ -19,7 +19,7 @@ function resolveSupabaseConfig() {
   if (!isConfigured(url, key)) {
     if (process.env.NODE_ENV === "development") {
       console.warn(
-        "[supabase] Missing or placeholder Supabase env vars. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in frontend/.env.local, then restart `npm run dev`.",
+        "[supabase] Missing or placeholder Supabase env vars. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in frontend/.env.development, then restart `npm run dev`.",
       );
     }
     return { url: PLACEHOLDER_URL, key: PLACEHOLDER_KEY };

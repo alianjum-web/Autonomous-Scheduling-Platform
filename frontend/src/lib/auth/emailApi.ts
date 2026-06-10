@@ -17,11 +17,20 @@ interface RateLimitBody {
 }
 
 async function postAuthEmail<TBody extends object>(path: string, body: TBody): Promise<string> {
-  const response = await fetch(`${API_BASE}/v1/auth/${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}/v1/auth/${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    const hint =
+      API_BASE.includes("localhost") && typeof window !== "undefined" && !window.location.hostname.includes("localhost")
+        ? "NEXT_PUBLIC_API_URL is missing on Vercel — set it to your Render URL and redeploy."
+        : `Check that the API is running at ${API_BASE} and FRONTEND_ORIGIN on Render matches ${window.location.origin}.`;
+    throw new AuthEmailApiError(`Unable to reach the API. ${hint}`);
+  }
 
   const payload = (await response.json().catch(() => null)) as
     | { message?: string; detail?: string | RateLimitBody["detail"] }

@@ -54,10 +54,20 @@ async def _post_auth(path: str, payload: dict[str, Any]) -> tuple[int, dict[str,
     elif body and isinstance(body.get("message"), str):
         message = body["message"]
 
+    if message and "confirmation email" in message.lower():
+        message = (
+            "Could not send confirmation email. Configure Supabase → Authentication → "
+            "SMTP Settings with Resend (run `npm run resend:smtp --prefix backend` for values)."
+        )
+
     return response.status_code, body, message
 
 
 async def _guard(action: str, email: str, ip: str) -> tuple[bool, int, str | None]:
+    settings = get_settings()
+    if settings.environment == "development":
+        return True, 0, None
+
     ip_ok, ip_retry = await check_ip_limit(action, ip)
     if not ip_ok:
         AUTH_EMAIL_RATE_LIMITED.labels(action=action, reason="ip").inc()
