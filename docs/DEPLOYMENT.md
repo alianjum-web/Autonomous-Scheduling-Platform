@@ -133,6 +133,7 @@ Connect the GitHub repository in the Render dashboard (branch: `main`, auto-depl
 | Variable | Notes |
 |---|---|
 | `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_ANON_KEY` | Publishable key — same value as `NEXT_PUBLIC_SUPABASE_ANON_KEY` on Vercel |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only, never expose to frontend |
 | `SUPABASE_JWT_SECRET` | JWT verification |
 | `UPSTASH_REDIS_URL` | `rediss://...` for distributed locks |

@@ -1,7 +1,7 @@
 import os
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -14,6 +14,7 @@ class Settings(BaseSettings):
         env_file=_resolve_env_file(),
         env_file_encoding="utf-8",
         extra="ignore",
+        populate_by_name=True,
     )
 
     app_name: str = "Autonomous Scheduling Platform"
@@ -24,7 +25,12 @@ class Settings(BaseSettings):
 
     # Supabase — loaded from env / .env (defaults satisfy static analysis; min_length enforces presence)
     supabase_url: str = Field(default="", min_length=1)
-    supabase_anon_key: str = Field(default="", min_length=1)
+    # Auth email proxy uses the publishable key (same value as NEXT_PUBLIC_SUPABASE_ANON_KEY on Vercel).
+    supabase_anon_key: str = Field(
+        default="",
+        min_length=1,
+        validation_alias=AliasChoices("SUPABASE_ANON_KEY", "NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+    )
     supabase_service_role_key: str = Field(default="", min_length=1)
     supabase_jwt_secret: str = Field(default="", min_length=1)
 
