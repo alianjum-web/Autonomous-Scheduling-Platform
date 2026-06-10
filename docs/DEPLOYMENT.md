@@ -5,7 +5,7 @@
 | Component | Provider | Notes |
 |---|---|---|
 | **Next.js Frontend** | Vercel | Edge network, automatic HTTPS, preview deploys per PR |
-| **FastAPI Microservice** | Railway.app or AWS ECS | Dockerized, auto-scaled, private network egress |
+| **FastAPI Microservice** | Render | Dockerized, auto-scaled |
 | **PostgreSQL + pgvector** | Supabase Cloud | Managed, HIPAA-eligible, automated backups |
 | **Redis (Distributed Locks)** | Upstash Redis | Serverless, pay-per-request, global replication |
 | **LLM APIs** | OpenAI + Anthropic | Proxied through FastAPI — keys never reach browser |
@@ -25,7 +25,7 @@ flowchart LR
     end
 
     subgraph compute [Compute]
-        Railway[FastAPI on Railway]
+        Render[FastAPI on Render]
     end
 
     subgraph data [Data Plane]
@@ -44,46 +44,53 @@ flowchart LR
     end
 
     Patient((Patient)) --> Vercel
-    Vercel -->|HTTPS JWT| Railway
-    Railway --> Supabase
-    Railway --> Upstash
-    Railway --> Storage
-    Railway --> OpenAI
-    Railway --> Sentry
-    Grafana -->|scrape /metrics| Railway
+    Vercel -->|HTTPS JWT| Render
+    Render --> Supabase
+    Render --> Upstash
+    Render --> Storage
+    Render --> OpenAI
+    Render --> Sentry
+    Grafana -->|scrape /metrics| Render
 ```
 
 ---
 
 ## CI/CD Pipeline (Section 5.2)
 
-Workflow: [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml)
+Workflow: [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) (`CI & Migrations`)
+
+**GitHub Actions** — quality gates and schema migrations only. **Vercel** and **Render** deploy apps via their own GitHub integrations on every push to `main`.
 
 | Job | Steps | Trigger |
 |---|---|---|
-| `test-backend` | pytest + coverage (Redis service), Codecov upload | Every push / PR to `main` |
-| `test-frontend` | lint → type-check → unit tests → Playwright e2e | Every push / PR to `main` |
-| `deploy-backend` | Railway (`fastapi-triage` service) | `main` push only |
-| `deploy-frontend` | Vercel `--prod` | `main` push only |
+| `compliance-check` | PHI logging scan | Every push / PR to `main` |
+| `validate-database` | Migration filename + layout checks | Every push / PR to `main` |
+| `test-backend` | ruff + pytest + coverage (Redis service) | Every push / PR to `main` |
+| `test-frontend` | lint → type-check → build → unit + e2e tests | Every push / PR to `main` |
+| `apply-migrations` | `supabase db push` via `scripts/db/push.sh` | `main` push only (after tests pass) |
 
-### Required GitHub Secrets
-
-| Secret | Used By | How to Obtain |
+| Platform | Deploy trigger | Root directory |
 |---|---|---|
-| `VERCEL_TOKEN` | Vercel deploy | Vercel Dashboard → Settings → Tokens |
-| `VERCEL_ORG_ID` | Vercel deploy | `vercel link` or team settings |
-| `VERCEL_PROJECT_ID` | Vercel deploy | `vercel link` output |
-| `RAILWAY_TOKEN` | Railway deploy | Railway Dashboard → Account → Tokens |
-| `RAILWAY_PROJECT_ID` | Railway deploy | Project Settings → General |
-| `SUPABASE_URL` | Backend CI (optional) | Falls back to test defaults |
-| `SUPABASE_SERVICE_KEY` | Backend CI (optional) | Maps to `SUPABASE_SERVICE_ROLE_KEY` |
-| `SUPABASE_JWT_SECRET` | Backend CI (optional) | Falls back to test defaults |
-| `OPENAI_API_KEY` | Backend CI (optional) | For integration tests |
-| `NEXT_PUBLIC_SUPABASE_URL` | Frontend CI (optional) | Falls back to placeholders |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Frontend CI (optional) | Falls back to placeholders |
-| `CODECOV_TOKEN` | Coverage upload (optional) | codecov.io |
+| Vercel | GitHub push to `main` | `frontend/` |
+| Render | GitHub push to `main` | `backend/` |
 
-Configure the `production` environment in GitHub with required reviewers before first deploy.
+### GitHub Secrets (production environment)
+
+| Secret | Required? | Used by |
+|---|---|---|
+| `SUPABASE_ACCESS_TOKEN` | **Yes** (migrations) | `apply-migrations` |
+| `SUPABASE_PROJECT_REF` | **Yes** (migrations) | `apply-migrations` |
+| `SUPABASE_URL` | Optional | Backend CI tests |
+| `SUPABASE_SERVICE_KEY` | Optional | Backend CI tests |
+| `SUPABASE_JWT_SECRET` | Optional | Backend CI tests |
+| `OPENAI_API_KEY` | Optional | Backend CI tests |
+| `NEXT_PUBLIC_SUPABASE_URL` | Optional | Frontend CI build/tests |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Optional | Frontend CI build/tests |
+| `CODECOV_TOKEN` | Optional | Coverage upload |
+
+Runtime secrets (`SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY`, etc.) belong on **Vercel** and **Render** — not GitHub.
+
+Configure the `production` environment in GitHub with required reviewers before first migration apply.
 
 ### HIPAA compliance gate
 
@@ -107,7 +114,7 @@ vercel env pull .env.local
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://xxx.supabase.co` | Public |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `eyJ...` | Public anon key only |
-| `NEXT_PUBLIC_API_URL` | `https://api.yourclinic.com` | Railway backend URL |
+| `NEXT_PUBLIC_API_URL` | `https://api.yourclinic.com` | Render backend URL |
 | `NEXT_PUBLIC_SENTRY_DSN` | `https://...@sentry.io/...` | Optional |
 | `NEXT_PUBLIC_ENVIRONMENT` | `production` | |
 
@@ -115,18 +122,13 @@ Preview deployments are created automatically for every pull request.
 
 ---
 
-## Backend — Railway
+## Backend — Render
 
-**Root directory:** `backend/` (see [`railway.toml`](../backend/railway.toml))
+**Root directory:** `backend/` (Dockerfile in `backend/`)
 
-```bash
-cd backend
-railway login
-railway link
-railway up
-```
+Connect the GitHub repository in the Render dashboard (branch: `main`, auto-deploy on push).
 
-### Environment Variables (Railway)
+### Environment Variables (Render)
 
 | Variable | Notes |
 |---|---|
@@ -139,7 +141,7 @@ railway up
 | `SENTRY_DSN` | PHI-scrubbed error reporting |
 | `ENVIRONMENT` | `production` |
 
-Health check: `GET /health` (configured in `railway.toml` and Dockerfile).
+Health check: `GET /health` (configure in Render service settings and Dockerfile).
 
 ---
 
@@ -162,8 +164,7 @@ npm run gen:types                        # refresh frontend/src/types/database.t
 | Job | When | Action |
 |---|---|---|
 | `validate-database` | Every PR / push | Filename + layout checks (`scripts/db/validate-migrations.sh`) |
-| `deploy-database` | Push to `main` | `supabase db push` via `scripts/db/push.sh` |
-| `deploy-backend` / `deploy-frontend` | After migrations | Railway + Vercel deploy |
+| `apply-migrations` | Push to `main` (after tests) | `supabase db push` via `scripts/db/push.sh` |
 
 Required GitHub secrets (production environment):
 
@@ -171,9 +172,8 @@ Required GitHub secrets (production environment):
 |---|---|
 | `SUPABASE_ACCESS_TOKEN` | Supabase CLI auth ([Account → Access Tokens](https://supabase.com/dashboard/account/tokens)) |
 | `SUPABASE_PROJECT_REF` | Project ref from Supabase dashboard URL |
-| `SUPABASE_DB_PASSWORD` | Database password (if required by `supabase link`) |
 
-Migrations run **before** app deploys so API/frontend always target an up-to-date schema.
+Migrations run on `main` after quality gates pass. Vercel and Render deploy in parallel via GitHub webhooks.
 
 **Pre-launch checklist:**
 
@@ -235,4 +235,4 @@ The same [`backend/Dockerfile`](../backend/Dockerfile) can deploy to ECS/Fargate
 3. ALB health check on `/health`
 4. Private subnet egress for Supabase / Upstash / OpenAI
 
-Railway is the recommended path for Sprint delivery; ECS for enterprise VPC requirements.
+Render is the recommended path for Sprint delivery; ECS for enterprise VPC requirements.

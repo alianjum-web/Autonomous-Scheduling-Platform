@@ -1,4 +1,8 @@
-name: Production Deploy
+# Quality gates + database migrations only.
+# App deploys: Vercel (frontend) and Render (backend) via their GitHub integrations.
+# Runtime secrets live on Vercel/Render — not in this workflow.
+
+name: CI & Migrations
 
 on:
   push:
@@ -7,7 +11,7 @@ on:
     branches: [main]
 
 concurrency:
-  group: deploy-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -47,7 +51,6 @@ jobs:
           cache-dependency-path: backend/requirements.txt
 
       - run: pip install -r requirements.txt
-
       - run: ruff check app tests
       - run: pytest tests/ -v --cov=app --cov-report=xml
         env:
@@ -93,14 +96,27 @@ jobs:
       - run: npx playwright install --with-deps
       - run: npm run test:e2e
 
-  deploy-database:
-    name: Deploy Database Migrations
+  apply-migrations:
+    name: Apply Database Migrations
     needs: [test-backend, test-frontend]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: production
     steps:
       - uses: actions/checkout@v4
+
+      - name: Verify migration secrets
+        run: |
+          missing=()
+          [ -z "${{ secrets.SUPABASE_ACCESS_TOKEN }}" ] && missing+=("SUPABASE_ACCESS_TOKEN")
+          [ -z "${{ secrets.SUPABASE_PROJECT_REF }}" ] && missing+=("SUPABASE_PROJECT_REF")
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "ERROR: Missing GitHub production secrets: ${missing[*]}" >&2
+            echo "SUPABASE_ACCESS_TOKEN — https://supabase.com/dashboard/account/tokens" >&2
+            echo "SUPABASE_PROJECT_REF  — project ref from dashboard URL" >&2
+            echo "Add under: Repo → Settings → Environments → production → Secrets" >&2
+            exit 1
+          fi
 
       - uses: supabase/setup-cli@v1
         with:
@@ -111,35 +127,3 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-
-  deploy-backend:
-    needs: [deploy-database]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: railwayapp/railway-github-action@v1
-        with:
-          railway_token: ${{ secrets.RAILWAY_TOKEN }}
-          service: fastapi-triage
-        env:
-          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-
-  deploy-frontend:
-    needs: [deploy-database]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: frontend
-          vercel-args: "--prod"
