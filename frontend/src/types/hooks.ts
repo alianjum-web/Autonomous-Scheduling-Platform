@@ -4,6 +4,7 @@ import type { Session } from "@supabase/supabase-js";
 
 import type { ClinicRole } from "@/types/auth";
 import type { AvailableSlot, BookingStep } from "@/types/booking";
+import type { SendChatMessageOptions } from "@/types/triage";
 
 export interface UseAuthSessionReturn {
   session: Session | null;
@@ -36,7 +37,7 @@ export type StreamEventKind = "done" | "meta" | "token";
 
 export interface UseStreamingChatReturn {
   startChat: () => Promise<void>;
-  sendMessage: (message: string) => Promise<void>;
+  sendMessage: (message: string, options?: SendChatMessageOptions) => Promise<void>;
   resumeStream: () => Promise<void>;
   closeStream: () => void;
 }

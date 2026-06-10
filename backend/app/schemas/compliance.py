@@ -16,3 +16,21 @@ class BAAStatusResponse(BaseModel):
 
 class BAAAcknowledgeResponse(BAAStatusResponse):
     message: str = "HIPAA BAA acknowledged — AI features enabled for this clinic."
+
+
+class ComplianceAuditEntry(BaseModel):
+    id: str
+    action: str
+    actor_id: str | None = None
+    resource_type: str
+    resource_id: str
+    created_at: str
+    metadata: dict = Field(default_factory=dict)
+
+
+class ComplianceReportResponse(BaseModel):
+    baa: BAAStatusResponse
+    recent_audit: list[ComplianceAuditEntry] = Field(
+        default_factory=list,
+        description="Recent compliance-related audit events for this tenant.",
+    )

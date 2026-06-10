@@ -47,7 +47,14 @@ async def send_triage_message(
 ):
     await require_tenant_baa(tenant_id)
     history = await triage_service.prepare_message_turn(session_id, tenant_id, body)
-    stream = triage_service.stream_message_sse(session_id, tenant_id, body.message, history)
+    stream = triage_service.stream_message_sse(
+        session_id,
+        tenant_id,
+        body.message,
+        history,
+        action=body.action,
+        selected_slot=body.selected_slot,
+    )
     return sse_response(request, stream)
 
 

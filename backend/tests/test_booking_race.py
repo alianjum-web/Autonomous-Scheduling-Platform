@@ -56,4 +56,4 @@ async def test_booking_returns_409_on_db_unique_violation(client, make_token, te
 
     assert response.status_code == 409
     assert "no longer available" in response.json()["detail"]
-    mock_delete.assert_awaited_once_with("cal-event-1")
+    mock_delete.assert_awaited_once_with(tenant_id, "cal-event-1")

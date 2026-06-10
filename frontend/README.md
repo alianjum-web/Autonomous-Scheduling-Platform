@@ -5,9 +5,9 @@ Next.js 16 patient intake widget and staff dashboard. Part of the [Autonomous Sc
 ## Quick Start
 
 ```bash
-cp .env.example .env.local   # fill in Supabase + API URL
+cp .env.example .env.development   # fill in Supabase + API URL
 npm install
-npm run dev
+npm run dev                        # loads .env.development
 ```
 
 Open [http://localhost:3000/chat](http://localhost:3000/chat) for the patient chat widget.

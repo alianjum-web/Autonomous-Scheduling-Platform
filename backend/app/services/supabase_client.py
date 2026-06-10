@@ -93,12 +93,77 @@ class SupabaseService:
             result = (
                 self.get_client()
                 .table("tenants")
-                .select("id, slug, name, hipaa_baa_signed_at, hipaa_baa_signed_by, created_at")
+                .select(
+                    "id, slug, name, hipaa_baa_signed_at, hipaa_baa_signed_by, created_at, "
+                    "timezone, calendar_provider, google_calendar_id, "
+                    "business_hours_start, business_hours_end, slot_duration_minutes"
+                )
                 .eq("id", tenant_id)
-                .maybe_single()
+                .limit(1)
                 .execute()
             )
-            return _optional_row(_response_data(result))
+            rows = _rows(_response_data(result))
+            return rows[0] if rows else None
+
+        return await self._run(_fetch)
+
+    async def update_tenant_calendar_config(
+        self,
+        tenant_id: str,
+        *,
+        timezone: str,
+        calendar_provider: str,
+        google_calendar_id: str | None,
+        business_hours_start: int,
+        business_hours_end: int,
+        slot_duration_minutes: int,
+    ) -> dict[str, Any]:
+        now = datetime.now(timezone.utc).isoformat()
+        patch = {
+            "timezone": timezone,
+            "calendar_provider": calendar_provider,
+            "google_calendar_id": google_calendar_id,
+            "business_hours_start": business_hours_start,
+            "business_hours_end": business_hours_end,
+            "slot_duration_minutes": slot_duration_minutes,
+            "updated_at": now,
+        }
+
+        def _update() -> dict[str, Any]:
+            result = (
+                self.get_client()
+                .table("tenants")
+                .update(patch)
+                .eq("id", tenant_id)
+                .execute()
+            )
+            rows = _rows(_response_data(result))
+            if not rows:
+                raise RuntimeError("Tenant not found for calendar config update")
+            return rows[0]
+
+        return await self._run(_update)
+
+    async def list_audit_logs(
+        self,
+        tenant_id: str,
+        *,
+        actions: list[str] | None = None,
+        limit: int = 25,
+    ) -> list[dict[str, Any]]:
+        def _fetch() -> list[dict[str, Any]]:
+            query = (
+                self.get_client()
+                .table("audit_logs")
+                .select("id, action, actor_id, resource_type, resource_id, created_at, metadata")
+                .eq("tenant_id", tenant_id)
+                .order("created_at", desc=True)
+                .limit(limit)
+            )
+            if actions:
+                query = query.in_("action", actions)
+            result = query.execute()
+            return _rows(_response_data(result))
 
         return await self._run(_fetch)
 
@@ -586,6 +651,8 @@ supabase_client = supabase_service
 warm_supabase_pool = supabase_service.warm_pool
 ping_supabase = supabase_service.ping
 get_tenant = supabase_service.get_tenant
+update_tenant_calendar_config = supabase_service.update_tenant_calendar_config
+list_audit_logs = supabase_service.list_audit_logs
 acknowledge_tenant_baa = supabase_service.acknowledge_tenant_baa
 insert_audit_log = supabase_service.insert_audit_log
 get_supabase_client = supabase_service.get_client

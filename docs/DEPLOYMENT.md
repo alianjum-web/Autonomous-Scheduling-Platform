@@ -105,7 +105,8 @@ The `compliance-check` job runs `scripts/compliance/scan-codebase-for-phi-loggin
 ```bash
 cd frontend
 vercel link
-vercel env pull .env.local
+# Production deploys use Vercel dashboard env vars. For local reference only:
+vercel env pull .env.production
 ```
 
 ### Environment Variables (Vercel)
@@ -141,6 +142,9 @@ Connect the GitHub repository in the Render dashboard (branch: `main`, auto-depl
 | `FRONTEND_ORIGIN` | Vercel production URL (CORS) |
 | `SENTRY_DSN` | PHI-scrubbed error reporting |
 | `ENVIRONMENT` | `production` |
+| `BAA_ENFORCEMENT` | `true` — blocks AI triage and document ingest until clinic admin acknowledges BAA in Settings |
+| `GOOGLE_CALENDAR_ID` | Optional global fallback calendar ID |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | JSON credentials for Google Calendar free/busy (per-tenant calendar IDs in Settings) |
 
 Health check: `GET /health` (configure in Render service settings and Dockerfile).
 

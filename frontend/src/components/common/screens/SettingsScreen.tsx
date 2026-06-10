@@ -11,6 +11,8 @@ import { PageShell } from "@/components/common/layout/PageShell";
 import { AccessGate } from "@/components/common/molecules/AccessGate";
 import { PageHeader } from "@/components/common/molecules/PageHeader";
 import { resetFeatureState } from "@/components/common/store/resetFeatureState";
+import { CalendarConfigPanel } from "@/components/common/molecules/CalendarConfigPanel";
+import { ComplianceAuditPanel } from "@/components/common/molecules/ComplianceAuditPanel";
 import { useGetBAAStatusQuery, useAcknowledgeBAAMutation, useGetUserProfileQuery } from "@/components/common/store/settingsApi";
 import { showToast } from "@/components/ui/toast";
 import { useAppDispatch } from "@/components/common/store/hooks";
@@ -216,6 +218,13 @@ export function SettingsScreen() {
             ) : null}
           </CardContent>
         </Card>
+
+        {isAdmin ? (
+          <>
+            <CalendarConfigPanel />
+            <ComplianceAuditPanel />
+          </>
+        ) : null}
 
         {isAdmin ? (
           <Card>

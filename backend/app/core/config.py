@@ -1,23 +1,20 @@
-import os
 from functools import lru_cache
 
 from pydantic import AliasChoices, Field, ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.core.env_files import resolve_env_file_path
 
-def _resolve_env_file() -> str:
-    """Load backend/.env.development or backend/.env.production (no .env copy step)."""
-    if override := os.environ.get("ENV_FILE"):
-        return override
-    mode = os.environ.get("APP_ENV") or os.environ.get("ENVIRONMENT") or "development"
-    if str(mode).strip().lower() == "production":
-        return ".env.production"
-    return ".env.development"
+
+def _settings_env_file() -> str | None:
+    """Load backend/.env.development or .env.production; skip if missing (e.g. Docker injects env)."""
+    path = resolve_env_file_path()
+    return str(path) if path.is_file() else None
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=_resolve_env_file(),
+        env_file=_settings_env_file(),
         env_file_encoding="utf-8",
         extra="ignore",
         populate_by_name=True,

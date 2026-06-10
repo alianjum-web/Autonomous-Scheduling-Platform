@@ -49,6 +49,7 @@ const bookingSlice = createSlice({
   initialState,
   reducers: {
     setAvailableSlots(state, action: PayloadAction<string[]>) {
+      const key = action.payload.join("|");
       state.availableSlots = action.payload.map((iso) => ({
         iso,
         label: formatSlotLabel(iso),
@@ -56,6 +57,10 @@ const bookingSlice = createSlice({
       }));
       if (action.payload.length > 0 && state.bookingStep === "idle") {
         state.bookingStep = "select";
+      }
+      // Chat-first booking: keep drawer closed; inline chips are primary UX.
+      if (key) {
+        state.dismissedSlotsKey = key;
       }
     },
     selectSlot(state, action: PayloadAction<string>) {

@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
-# Verify SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY from backend/.env or env vars.
+# Verify SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY from backend env file or env vars.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-ENV_FILE="${ENV_FILE:-$ROOT/backend/.env}"
+MODE="${APP_ENV:-${ENVIRONMENT:-development}}"
+if [[ "${MODE,,}" == "production" ]]; then
+  ENV_FILE="${ENV_FILE:-$ROOT/backend/.env.production}"
+else
+  ENV_FILE="${ENV_FILE:-$ROOT/backend/.env.development}"
+fi
 
 if [[ -f "$ENV_FILE" ]]; then
   set -a
@@ -12,10 +17,11 @@ if [[ -f "$ENV_FILE" ]]; then
   set +a
 fi
 
-: "${SUPABASE_URL:?Set SUPABASE_URL in backend/.env or the environment}"
-: "${SUPABASE_SERVICE_ROLE_KEY:?Set SUPABASE_SERVICE_ROLE_KEY in backend/.env or the environment}"
+: "${SUPABASE_URL:?Set SUPABASE_URL in $ENV_FILE or the environment}"
+: "${SUPABASE_SERVICE_ROLE_KEY:?Set SUPABASE_SERVICE_ROLE_KEY in $ENV_FILE or the environment}"
 
 BASE="${SUPABASE_URL%/}"
+echo "==> Env file: $ENV_FILE"
 echo "==> Project URL: $BASE"
 echo "==> Auth health (expect 200):"
 curl -sS -o /dev/null -w "HTTP %{http_code}\n" "$BASE/auth/v1/health"

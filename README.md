@@ -141,10 +141,11 @@ Configure the **Custom Access Token Hook** in Supabase Dashboard → Authenticat
 
 ### 2. Environment Variables
 
-**Frontend** — copy and fill `frontend/.env.example`:
+**Frontend** — copy and fill from `frontend/.env.example`:
 
 ```bash
-cp frontend/.env.example frontend/.env.local
+cp frontend/.env.example frontend/.env.development
+cp frontend/.env.example frontend/.env.production   # optional: local prod simulation
 ```
 
 | Variable | Description |
@@ -153,10 +154,11 @@ cp frontend/.env.example frontend/.env.local
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon (public) key |
 | `NEXT_PUBLIC_API_URL` | FastAPI base URL (default `http://localhost:8000`) |
 
-**Backend** — copy and fill `backend/.env.example`:
+**Backend** — copy and fill from `backend/.env.example`:
 
 ```bash
-cp backend/.env.example backend/.env
+cp backend/.env.example backend/.env.development
+cp backend/.env.example backend/.env.production   # optional: local prod simulation
 ```
 
 | Variable | Description |

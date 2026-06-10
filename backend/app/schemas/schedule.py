@@ -30,6 +30,26 @@ class CancelResponse(BaseModel):
     status: str
 
 
+class CalendarConfigResponse(BaseModel):
+    timezone: str
+    calendar_provider: str
+    google_calendar_id: str | None = None
+    business_hours_start: int = 9
+    business_hours_end: int = 17
+    slot_duration_minutes: int = 30
+    google_connected: bool = False
+    uses_mock_slots: bool = True
+
+
+class CalendarConfigUpdateRequest(BaseModel):
+    timezone: str = "America/New_York"
+    calendar_provider: str = Field(pattern="^(none|google|mock)$")
+    google_calendar_id: str | None = None
+    business_hours_start: int = Field(ge=0, le=23, default=9)
+    business_hours_end: int = Field(ge=1, le=24, default=17)
+    slot_duration_minutes: int = Field(ge=15, le=120, default=30)
+
+
 class AppointmentUpdateRequest(BaseModel):
     model_config = ConfigDict(extra="allow")
 

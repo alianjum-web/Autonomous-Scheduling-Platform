@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel
 
 from app.schemas.db import ChatMessage
+
+TriageMessageAction = Literal["select_slot", "provide_name"]
 
 
 class CreateSessionRequest(BaseModel):
@@ -17,6 +21,8 @@ class CreateSessionResponse(BaseModel):
 class TriageMessageRequest(BaseModel):
     message: str
     history: list[ChatMessage] | None = None
+    action: TriageMessageAction | None = None
+    selected_slot: str | None = None
 
 
 class EscalateRequest(BaseModel):

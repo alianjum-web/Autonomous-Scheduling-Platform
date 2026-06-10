@@ -2,6 +2,8 @@ import { baseApi } from "@/components/common/store/baseApi";
 import type {
   BookAppointmentRequest,
   BookAppointmentResponse,
+  CalendarConfigResponse,
+  CalendarConfigUpdateRequest,
   SlotsResponse,
 } from "@/types/schedule";
 
@@ -19,7 +21,24 @@ export const bookingApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Appointments"],
     }),
+    getCalendarConfig: builder.query<CalendarConfigResponse, void>({
+      query: () => "/v1/schedule/calendar-config",
+      providesTags: ["Calendar"],
+    }),
+    updateCalendarConfig: builder.mutation<CalendarConfigResponse, CalendarConfigUpdateRequest>({
+      query: (body) => ({
+        url: "/v1/schedule/calendar-config",
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Calendar", "Compliance"],
+    }),
   }),
 });
 
-export const { useGetAvailableSlotsQuery, useBookAppointmentMutation } = bookingApi;
+export const {
+  useGetAvailableSlotsQuery,
+  useBookAppointmentMutation,
+  useGetCalendarConfigQuery,
+  useUpdateCalendarConfigMutation,
+} = bookingApi;

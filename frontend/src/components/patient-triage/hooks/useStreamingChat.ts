@@ -31,7 +31,7 @@ import {
 } from "@/components/patient-triage/store/triageSlice";
 import type { DbChatMessage } from "@/types";
 import type { UseStreamingChatReturn } from "@/types/hooks";
-import type { TriageWebSocketOutbound } from "@/types/triage";
+import type { SendChatMessageOptions, TriageWebSocketOutbound } from "@/types/triage";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const USE_WEBSOCKET = process.env.NEXT_PUBLIC_USE_TRIAGE_WS === "1";
@@ -138,7 +138,7 @@ export function useStreamingChat(): UseStreamingChatReturn {
   );
 
   const streamViaFetch = useCallback(
-    async (id: string, message: string, token: string) => {
+    async (id: string, message: string, token: string, options?: SendChatMessageOptions) => {
       abortRef.current = new AbortController();
       dispatch(startAssistantMessage());
 
@@ -153,7 +153,12 @@ export function useStreamingChat(): UseStreamingChatReturn {
           "Content-Type": "application/json",
           Accept: "text/event-stream",
         },
-        body: JSON.stringify({ message, history }),
+        body: JSON.stringify({
+          message,
+          history,
+          action: options?.action,
+          selected_slot: options?.selected_slot,
+        }),
         signal: abortRef.current.signal,
       });
 
@@ -179,7 +184,7 @@ export function useStreamingChat(): UseStreamingChatReturn {
   );
 
   const streamViaWebSocket = useCallback(
-    async (id: string, message: string, token: string) => {
+    async (id: string, message: string, token: string, options?: SendChatMessageOptions) => {
       return new Promise<void>((resolve, reject) => {
         const wsBase = API_BASE.replace(/^http/, "ws");
         const ws = new WebSocket(`${wsBase}/v1/triage/ws/${id}`, []);
@@ -187,10 +192,12 @@ export function useStreamingChat(): UseStreamingChatReturn {
         dispatch(startAssistantMessage());
 
         ws.onopen = () => {
-          const payload: TriageWebSocketOutbound = {
+          const payload: TriageWebSocketOutbound & SendChatMessageOptions = {
             message,
             history: messages.map((m) => ({ role: m.role, content: m.content })),
             authorization: `Bearer ${token}`,
+            action: options?.action,
+            selected_slot: options?.selected_slot,
           };
           ws.send(JSON.stringify(payload));
         };
@@ -223,7 +230,7 @@ export function useStreamingChat(): UseStreamingChatReturn {
   );
 
   const sendMessage = useCallback(
-    async (message: string) => {
+    async (message: string, options?: SendChatMessageOptions) => {
       if (!sessionId) return;
       let token = accessToken;
       if (!token) {
@@ -239,9 +246,9 @@ export function useStreamingChat(): UseStreamingChatReturn {
         dispatch(setError(null));
         dispatch(setStatus("streaming"));
         if (USE_WEBSOCKET) {
-          await streamViaWebSocket(sessionId, message, token);
+          await streamViaWebSocket(sessionId, message, token, options);
         } else {
-          await streamViaFetch(sessionId, message, token);
+          await streamViaFetch(sessionId, message, token, options);
         }
       } catch {
         dispatch(setError("Failed to get response. Please try again."));

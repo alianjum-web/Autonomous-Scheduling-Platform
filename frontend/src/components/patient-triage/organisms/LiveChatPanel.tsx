@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { EmergencyBanner } from "@/components/patient-triage/atoms/EmergencyBanner";
 import { StatusBadge } from "@/components/patient-triage/atoms/StatusBadge";
 import { TypingIndicator } from "@/components/patient-triage/atoms/TypingIndicator";
+import { InlineSlotPicker } from "@/components/patient-triage/molecules/InlineSlotPicker";
 import { MessageRow } from "@/components/patient-triage/molecules/MessageRow";
 import { TriageStatusBar } from "@/components/patient-triage/molecules/TriageStatusBar";
 import { SlotBookingDrawer } from "@/components/patient-triage/organisms/SlotBookingDrawer";
@@ -25,7 +26,7 @@ import {
   selectSelectedSlot,
   selectSlotsKey,
 } from "@/components/patient-triage/store/bookingSelectors";
-import { setDismissedSlotsKey } from "@/components/patient-triage/store/bookingSlice";
+import { selectSlot, setDismissedSlotsKey } from "@/components/patient-triage/store/bookingSlice";
 import {
   addUserMessage,
   clearDraftMessage,
@@ -83,6 +84,19 @@ export function LiveChatPanel({ disabled = false }: LiveChatPanelProps) {
       dispatch(setEmergencyDetected(detectEmergencyKeywords(value)));
     },
     [dispatch],
+  );
+
+  const handleSlotSelect = useCallback(
+    async (iso: string) => {
+      if (!sessionId || isStreaming) return;
+      const label =
+        availableSlots.find((slot) => slot.iso === iso)?.label ??
+        new Date(iso).toLocaleString();
+      dispatch(selectSlot(iso));
+      dispatch(addUserMessage(`I'd like ${label}`));
+      await sendMessage(iso, { action: "select_slot", selected_slot: iso });
+    },
+    [availableSlots, dispatch, isStreaming, sendMessage, sessionId],
   );
 
   const onSubmit = form.handleSubmit(async ({ message }) => {
@@ -152,6 +166,14 @@ export function LiveChatPanel({ disabled = false }: LiveChatPanelProps) {
             messages.map((msg) => <MessageRow key={msg.id} message={msg} />)
           )}
           {isStreaming && messages[messages.length - 1]?.content === "" ? <TypingIndicator /> : null}
+          {!bookingComplete && availableSlots.length > 0 ? (
+            <InlineSlotPicker
+              slots={availableSlots}
+              selectedSlot={selectedSlot}
+              disabled={isStreaming || disabled}
+              onSelect={(iso) => void handleSlotSelect(iso)}
+            />
+          ) : null}
         </div>
 
         {error ? (
@@ -173,8 +195,13 @@ export function LiveChatPanel({ disabled = false }: LiveChatPanelProps) {
           ) : (
             <>
               {availableSlots.length > 0 ? (
-                <Button variant="outline" onClick={() => dispatch(setDismissedSlotsKey(null))}>
-                  Book Slot
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 text-xs"
+                  onClick={() => dispatch(setDismissedSlotsKey(null))}
+                >
+                  Form
                 </Button>
               ) : null}
               <Form {...form}>

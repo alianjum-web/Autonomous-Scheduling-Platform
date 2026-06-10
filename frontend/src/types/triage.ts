@@ -47,9 +47,18 @@ export interface CreateTriageSessionResponse {
   status: string;
 }
 
+export type TriageMessageAction = "select_slot" | "provide_name";
+
 export interface TriageMessageRequest {
   message: string;
   history?: DbChatMessage[];
+  action?: TriageMessageAction;
+  selected_slot?: string;
+}
+
+export interface SendChatMessageOptions {
+  action?: TriageMessageAction;
+  selected_slot?: string;
 }
 
 export interface EscalateSessionRequest {

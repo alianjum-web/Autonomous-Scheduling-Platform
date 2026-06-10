@@ -13,6 +13,8 @@ interface AccessGateProps {
   icon?: ReactNode;
   imageKey?: ImageAssetKey;
   requireAdmin?: boolean;
+  /** When true, user is signed in but lacks permission — hide redundant Sign in CTA. */
+  signedIn?: boolean;
   className?: string;
 }
 
@@ -22,6 +24,7 @@ export function AccessGate({
   icon,
   imageKey = "team",
   requireAdmin = false,
+  signedIn = false,
   className,
 }: AccessGateProps) {
   return (
@@ -42,17 +45,32 @@ export function AccessGate({
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
-            <Button asChild size="lg" className="shadow-md">
-              <Link href="/sign-in">Sign in</Link>
-            </Button>
-            <Button asChild variant="outline" size="lg">
-              <Link href="/sign-up">{requireAdmin ? "Request staff access" : "Create account"}</Link>
-            </Button>
+            {signedIn ? (
+              <>
+                <Button asChild size="lg" className="shadow-md">
+                  <Link href="/chat">Go to patient chat</Link>
+                </Button>
+                <Button asChild variant="outline" size="lg">
+                  <Link href="/help">Staff access guide</Link>
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button asChild size="lg" className="shadow-md">
+                  <Link href="/sign-in">Sign in</Link>
+                </Button>
+                <Button asChild variant="outline" size="lg">
+                  <Link href="/sign-up">{requireAdmin ? "Request staff access" : "Create account"}</Link>
+                </Button>
+              </>
+            )}
           </div>
           <p className="text-xs text-muted-foreground">
-            {requireAdmin
-              ? "Staff accounts require clinic admin role in Supabase app metadata."
-              : "Secure Supabase authentication with tenant-scoped JWT claims."}
+            {signedIn && requireAdmin
+              ? "Ask your clinic administrator to set clinic_admin in Supabase app metadata for your account."
+              : requireAdmin
+                ? "Staff accounts require clinic admin role in Supabase app metadata."
+                : "Secure Supabase authentication with tenant-scoped JWT claims."}
           </p>
         </CardContent>
       </Card>

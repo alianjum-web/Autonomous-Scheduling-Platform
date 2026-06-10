@@ -5,10 +5,10 @@ FastAPI AI microservice — LangGraph agent orchestration, SSE streaming, and Su
 ## Quick Start
 
 ```bash
-cp .env.example .env          # fill in Supabase + JWT secret
+cp .env.example .env.development   # fill in Supabase + JWT secret
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+npm run dev                        # APP_ENV=development → .env.development
 ```
 
 Or via Docker Compose (includes Redis):

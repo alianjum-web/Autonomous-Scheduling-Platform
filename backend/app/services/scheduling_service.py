@@ -9,11 +9,18 @@ from app.adapters.calendar_gateway import (
     create_calendar_event,
     delete_calendar_event,
     get_available_slots,
+    resolve_tenant_calendar_config,
 )
 from app.adapters.redis_client import acquire_lock, release_lock
 from app.api.metrics import BOOKINGS
 from app.schemas.db import AppointmentRow
-from app.schemas.schedule import BookRequest, BookResponse, CancelResponse
+from app.schemas.schedule import (
+    BookRequest,
+    BookResponse,
+    CalendarConfigResponse,
+    CalendarConfigUpdateRequest,
+    CancelResponse,
+)
 from app.services import supabase_client
 from app.services.supabase_client import AppointmentConflictError
 
@@ -100,7 +107,7 @@ async def book_appointment(tenant_id: str, request: BookRequest) -> BookResponse
             )
         except AppointmentConflictError:
             if calendar_event_id:
-                await delete_calendar_event(calendar_event_id)
+                await delete_calendar_event(tenant_id, calendar_event_id)
             raise SlotUnavailableError() from None
 
         if request.session_id:
@@ -133,7 +140,46 @@ async def cancel_appointment(appointment_id: str, tenant_id: str) -> CancelRespo
 
     event_id = appointment.get("external_event_id") or appointment.get("calendar_event_id")
     if event_id:
-        await delete_calendar_event(event_id)
+        await delete_calendar_event(tenant_id, event_id)
 
     await supabase_client.cancel_appointment(appointment_id, tenant_id)
     return CancelResponse(appointment_id=appointment_id, status="cancelled")
+
+
+async def get_calendar_config(tenant_id: str) -> CalendarConfigResponse:
+    config = await resolve_tenant_calendar_config(tenant_id)
+    return CalendarConfigResponse(
+        timezone=config.timezone,
+        calendar_provider=config.calendar_provider,
+        google_calendar_id=config.google_calendar_id,
+        business_hours_start=config.business_hours_start,
+        business_hours_end=config.business_hours_end,
+        slot_duration_minutes=config.slot_duration_minutes,
+        google_connected=config.uses_google,
+        uses_mock_slots=not config.uses_google,
+    )
+
+
+async def update_calendar_config(
+    tenant_id: str,
+    user_id: str,
+    body: CalendarConfigUpdateRequest,
+) -> CalendarConfigResponse:
+    await supabase_client.update_tenant_calendar_config(
+        tenant_id,
+        timezone=body.timezone,
+        calendar_provider=body.calendar_provider,
+        google_calendar_id=body.google_calendar_id,
+        business_hours_start=body.business_hours_start,
+        business_hours_end=body.business_hours_end,
+        slot_duration_minutes=body.slot_duration_minutes,
+    )
+    await supabase_client.insert_audit_log(
+        tenant_id=tenant_id,
+        actor_id=user_id,
+        action="calendar_config_updated",
+        resource_type="tenant",
+        resource_id=tenant_id,
+        metadata=body.model_dump(),
+    )
+    return await get_calendar_config(tenant_id)

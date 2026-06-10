@@ -32,11 +32,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# Legacy overrides (not used)
+# Secrets — only .env.development and .env.production (copy from .env.example)
 .env
 .env.local
 .env.*.local
-# Local env files (gitignored — copy from .env.example)
 .env.development
 .env.production
 !.env.example

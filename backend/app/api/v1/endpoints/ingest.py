@@ -21,6 +21,7 @@ async def list_documents(
     tenant_id: str = Depends(get_tenant_id),
     _admin: dict = Depends(require_admin),
 ) -> DocumentListResponse:
+    await require_tenant_baa(tenant_id)
     documents = await ingestion_service.list_documents(tenant_id)
     return DocumentListResponse(documents=documents)
 
@@ -31,6 +32,7 @@ async def get_document_chunks(
     tenant_id: str = Depends(get_tenant_id),
     _admin: dict = Depends(require_admin),
 ) -> DocumentChunksResponse:
+    await require_tenant_baa(tenant_id)
     chunks = await ingestion_service.get_document_chunks(document_id, tenant_id)
     return DocumentChunksResponse(chunks=chunks)
 
@@ -75,6 +77,7 @@ async def get_ingestion_status(
     tenant_id: str = Depends(get_tenant_id),
     _admin: dict = Depends(require_admin),
 ):
+    await require_tenant_baa(tenant_id)
     return await ingestion_service.get_ingestion_status(job_id, tenant_id)
 
 
@@ -84,5 +87,6 @@ async def delete_document(
     tenant_id: str = Depends(get_tenant_id),
     _admin: dict = Depends(require_admin),
 ) -> DeleteDocumentResponse:
+    await require_tenant_baa(tenant_id)
     deleted = await ingestion_service.delete_document(document_id, tenant_id)
     return DeleteDocumentResponse(deleted=deleted)

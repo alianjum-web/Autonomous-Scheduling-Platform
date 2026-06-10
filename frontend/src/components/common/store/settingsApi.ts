@@ -1,7 +1,11 @@
 import { fetchUserProfile } from "@/lib/supabase/onboarding";
 
 import { baseApi } from "./baseApi";
-import type { BAAAcknowledgeResponse, BAAStatusResponse } from "@/types/compliance";
+import type {
+  BAAAcknowledgeResponse,
+  BAAStatusResponse,
+  ComplianceReportResponse,
+} from "@/types/compliance";
 import type { ProfileTenantEmbed } from "@/types/supabase-profile";
 import type { UserProfileSummary } from "@/types/settings";
 
@@ -56,8 +60,16 @@ export const settingsApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Compliance"],
     }),
+    getComplianceReport: builder.query<ComplianceReportResponse, void>({
+      query: () => "/v1/compliance/report",
+      providesTags: ["Compliance"],
+    }),
   }),
 });
 
-export const { useGetUserProfileQuery, useGetBAAStatusQuery, useAcknowledgeBAAMutation } =
-  settingsApi;
+export const {
+  useGetUserProfileQuery,
+  useGetBAAStatusQuery,
+  useAcknowledgeBAAMutation,
+  useGetComplianceReportQuery,
+} = settingsApi;

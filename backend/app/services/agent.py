@@ -26,8 +26,10 @@ from app.services.emergency_keywords import (
 )
 from app.services.rag import retrieve_context
 from app.services.booking_intent import (
+    ISO_SLOT_RE,
     extract_patient_name,
     extract_patient_phone,
+    looks_like_name,
     match_slot_from_message,
 )
 from app.services.scheduling_service import (
@@ -70,6 +72,7 @@ class AgentState(TypedDict):
     booking_confirmed: NotRequired[bool]
     confirmation_code: NotRequired[str | None]
     booked_slot: NotRequired[str | None]
+    force_slot_flow: NotRequired[bool]
 
 
 def _get_stream_queue(session_id: str) -> asyncio.Queue[str | None]:
@@ -101,7 +104,10 @@ async def emergency_interceptor(state: AgentState) -> AgentState:
 
 
 async def intent_classifier(state: AgentState) -> AgentState:
-    msg = state.get("latest_user_message", "").lower()
+    msg = state.get("latest_user_message", "")
+    msg_lower = msg.lower()
+    if state.get("force_slot_flow") or ISO_SLOT_RE.search(msg):
+        return {**state, "intent": "slot_confirmation"}
     flags = get_feature_flags()
 
     if flags.features.triage.intent_classifier_enabled and is_chat_available():
@@ -131,15 +137,15 @@ async def intent_classifier(state: AgentState) -> AgentState:
         except Exception as exc:
             logger.warning("LLM intent classification failed", extra={"extra_data": {"error": str(exc)}})
 
-    if any(w in msg for w in ("book", "appointment", "schedule", "slot", "available")):
+    if any(w in msg_lower for w in ("book", "appointment", "schedule", "slot", "available")):
         intent = "booking_request"
-    elif any(w in msg for w in ("confirm", "yes", "that time", "works for me")):
+    elif any(w in msg_lower for w in ("confirm", "yes", "that time", "works for me")):
         intent = "slot_confirmation"
-    elif any(w in msg for w in ("cancel", "reschedule")):
+    elif any(w in msg_lower for w in ("cancel", "reschedule")):
         intent = "cancellation"
-    elif any(w in msg for w in ("human", "person", "staff", "coordinator", "speak to")):
+    elif any(w in msg_lower for w in ("human", "person", "staff", "coordinator", "speak to")):
         intent = "escalation"
-    elif any(w in msg for w in ("?", "what", "how", "when", "cost", "price", "insurance")):
+    elif any(w in msg_lower for w in ("?", "what", "how", "when", "cost", "price", "insurance")):
         intent = "faq"
     else:
         intent = "unknown"
@@ -390,7 +396,14 @@ async def escalation_trigger(state: AgentState) -> AgentState:
 
 
 def route_after_emergency(state: AgentState) -> str:
-    return END if state.get("is_emergency") else "intent_classifier"
+    if state.get("is_emergency"):
+        return END
+    if state.get("force_slot_flow"):
+        return "slot_checker"
+    selected = state.get("selected_slot")
+    if selected and looks_like_name(state.get("latest_user_message", "")):
+        return "booking_executor"
+    return "intent_classifier"
 
 
 def route_after_intent(state: AgentState) -> str:
@@ -407,7 +420,7 @@ def route_after_intent(state: AgentState) -> str:
 
 
 def route_after_slot(state: AgentState) -> str:
-    if state.get("intent") == "slot_confirmation":
+    if state.get("intent") == "slot_confirmation" or state.get("force_slot_flow"):
         return "booking_executor"
     return "rag_retriever"
 
@@ -435,7 +448,12 @@ def build_triage_graph():
     graph.add_conditional_edges(
         "emergency_interceptor",
         route_after_emergency,
-        {"intent_classifier": "intent_classifier", END: END},
+        {
+            "intent_classifier": "intent_classifier",
+            "slot_checker": "slot_checker",
+            "booking_executor": "booking_executor",
+            END: END,
+        },
     )
     graph.add_conditional_edges(
         "intent_classifier",
@@ -478,6 +496,9 @@ async def run_triage_agent(
     tenant_id: str,
     message: str,
     history: list[ChatMessage] | None = None,
+    *,
+    action: str | None = None,
+    selected_slot: str | None = None,
 ) -> AsyncIterator[str | dict[str, Any]]:
     graph = await get_triage_graph()
     queue = _get_stream_queue(session_id)
@@ -489,6 +510,12 @@ async def run_triage_agent(
             break
 
     config: RunnableConfig = {"configurable": {"thread_id": session_id}}
+    prev_state = await graph.aget_state(config)
+    prev_values = prev_state.values if prev_state else {}
+
+    resolved_slot = selected_slot or prev_values.get("selected_slot")
+    prev_slots = prev_values.get("available_slots") or []
+
     initial_state: AgentState = {
         "session_id": session_id,
         "tenant_id": tenant_id,
@@ -497,7 +524,13 @@ async def run_triage_agent(
             (history or []) + [{"role": "user", "content": message}],
         ),
         "latest_user_message": message,
+        "selected_slot": resolved_slot,
+        "available_slots": prev_slots,
+        "force_slot_flow": action == "select_slot" and bool(selected_slot),
     }
+    if action == "select_slot" and selected_slot:
+        initial_state["intent"] = "slot_confirmation"
+        initial_state["selected_slot"] = selected_slot
 
     await supabase_client.save_session_thread(
         session_id=session_id,

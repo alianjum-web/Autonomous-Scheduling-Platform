@@ -2,16 +2,36 @@
 
 from fastapi import APIRouter, Depends
 
-from app.core.security import get_tenant_id, require_admin
+from app.core.security import get_tenant_id, get_user_id, require_admin
 from app.schemas.schedule import (
     AppointmentUpdateRequest,
     BookRequest,
     BookResponse,
+    CalendarConfigResponse,
+    CalendarConfigUpdateRequest,
     CancelResponse,
 )
 from app.services import scheduling_service
 
 router = APIRouter(prefix="/schedule", tags=["schedule"])
+
+
+@router.get("/calendar-config", response_model=CalendarConfigResponse)
+async def get_calendar_config(
+    tenant_id: str = Depends(get_tenant_id),
+    _admin: dict = Depends(require_admin),
+) -> CalendarConfigResponse:
+    return await scheduling_service.get_calendar_config(tenant_id)
+
+
+@router.put("/calendar-config", response_model=CalendarConfigResponse)
+async def update_calendar_config(
+    body: CalendarConfigUpdateRequest,
+    tenant_id: str = Depends(get_tenant_id),
+    user_id: str = Depends(get_user_id),
+    _admin: dict = Depends(require_admin),
+) -> CalendarConfigResponse:
+    return await scheduling_service.update_calendar_config(tenant_id, user_id, body)
 
 
 @router.get("/slots")

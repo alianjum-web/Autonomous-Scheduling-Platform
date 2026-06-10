@@ -3,6 +3,7 @@ import pytest
 from app.services.booking_intent import (
     extract_patient_name,
     extract_patient_phone,
+    looks_like_name,
     match_slot_from_message,
 )
 
@@ -15,6 +16,16 @@ def test_match_slot_single_confirm():
 def test_match_slot_by_weekday():
     slot = "2026-06-15T14:00:00+00:00"
     assert match_slot_from_message("Monday at 2pm works", [slot]) is not None
+
+
+def test_looks_like_name_bare():
+    assert looks_like_name("Jane Smith") is True
+    assert looks_like_name("what is insurance") is False
+
+
+def test_match_slot_by_iso_fragment():
+    slot = "2026-06-15T14:00:00+00:00"
+    assert match_slot_from_message(slot, [slot]) == slot
 
 
 def test_extract_patient_name_from_phrase():

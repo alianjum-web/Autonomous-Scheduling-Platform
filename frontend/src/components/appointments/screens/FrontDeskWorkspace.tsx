@@ -62,6 +62,7 @@ export function FrontDeskWorkspace() {
         icon={<LayoutDashboard className="size-8" />}
         imageKey="frontDesk"
         requireAdmin
+        signedIn
       />
     );
   }

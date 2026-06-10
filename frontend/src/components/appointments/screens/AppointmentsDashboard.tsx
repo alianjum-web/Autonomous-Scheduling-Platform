@@ -80,6 +80,7 @@ export function AppointmentsDashboard() {
         icon={<CalendarDays className="size-8" />}
         imageKey="appointments"
         requireAdmin
+        signedIn
       />
     );
   }

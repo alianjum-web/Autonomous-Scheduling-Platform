@@ -167,6 +167,9 @@ async def stream_message_sse(
     tenant_id: str,
     message: str,
     history: list[ChatMessage] | None,
+    *,
+    action: str | None = None,
+    selected_slot: str | None = None,
 ) -> AsyncIterator[str]:
     if detect_emergency(message):
         async for chunk in _stream_emergency_sse(session_id, tenant_id, message):
@@ -175,7 +178,14 @@ async def stream_message_sse(
 
     meta: dict[str, Any] = {}
     try:
-        async for item in run_triage_agent(session_id, tenant_id, message, history):
+        async for item in run_triage_agent(
+            session_id,
+            tenant_id,
+            message,
+            history,
+            action=action,
+            selected_slot=selected_slot,
+        ):
             if isinstance(item, dict):
                 meta = item
             else:
@@ -210,9 +220,19 @@ async def stream_websocket_turn(
     tenant_id: str,
     message: str,
     history: list[ChatMessage],
+    *,
+    action: str | None = None,
+    selected_slot: str | None = None,
 ) -> AsyncIterator[dict[str, Any]]:
     await ensure_rate_limit(session_id)
-    async for token in run_triage_agent(session_id, tenant_id, message, history):
+    async for token in run_triage_agent(
+        session_id,
+        tenant_id,
+        message,
+        history,
+        action=action,
+        selected_slot=selected_slot,
+    ):
         if isinstance(token, str):
             yield {"token": token}
         elif isinstance(token, dict):

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Print Resend SMTP values for Supabase dashboard (reads backend/.env.development, no deps)."""
+"""Print Resend SMTP values for Supabase dashboard (reads active backend env file, no deps)."""
 
 from __future__ import annotations
 
@@ -8,7 +8,9 @@ import sys
 from pathlib import Path
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_ENV = BACKEND_ROOT / ".env.development"
+sys.path.insert(0, str(BACKEND_ROOT))
+
+from app.core.env_files import resolve_env_file_path  # noqa: E402
 
 DEFAULTS = {
     "RESEND_FROM_NAME": "Autonomous Scheduling Platform",
@@ -39,9 +41,11 @@ def getenv(key: str, file_values: dict[str, str]) -> str:
 
 
 def main() -> None:
-    env_path = Path(os.environ.get("ENV_FILE", DEFAULT_ENV))
-    if not env_path.is_absolute():
-        env_path = BACKEND_ROOT / env_path
+    env_path = resolve_env_file_path()
+    if override := os.environ.get("ENV_FILE"):
+        env_path = Path(override)
+        if not env_path.is_absolute():
+            env_path = BACKEND_ROOT / env_path
 
     file_values = load_env_file(env_path)
 
@@ -56,7 +60,7 @@ def main() -> None:
     print("Resend → Supabase SMTP configuration")
     print("=" * 40)
     print(f"Env file:               {env_path}")
-    print(f"Enable custom SMTP:     ON")
+    print("Enable custom SMTP:     ON")
     print(f"Sender email:           {from_email or '(set RESEND_FROM_EMAIL)'}")
     print(f"Sender name:            {from_name}")
     print(f"Host:                   {host}")
@@ -66,7 +70,7 @@ def main() -> None:
     print(f"Min interval per user:  {min_interval}s")
     print()
     if not api_key or not from_email:
-        print("⚠ Missing RESEND_API_KEY or RESEND_FROM_EMAIL in backend/.env.development")
+        print(f"⚠ Missing RESEND_API_KEY or RESEND_FROM_EMAIL in {env_path.name}")
         sys.exit(1)
     print("Copy the values above into:")
     print("Supabase → Authentication → Emails → SMTP Settings")

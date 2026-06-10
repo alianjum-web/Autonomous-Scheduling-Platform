@@ -16,13 +16,12 @@ __pycache__/
 htmlcov/
 coverage.xml
 
-# Legacy overrides (not used)
+# Secrets — only .env.development and .env.production (copy from .env.example)
 .env
 .env.local
 .env.*.local
-# Production secrets (gitignored)
-.env.production
 .env.development
+.env.production
 !.env.example
 
 # LangGraph runtime checkpoint

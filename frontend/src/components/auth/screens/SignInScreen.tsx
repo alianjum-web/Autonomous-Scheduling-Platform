@@ -40,7 +40,7 @@ export function SignInScreen() {
       ? "Password updated successfully. You can sign in now."
       : null;
 
-  const form = useLocalForm<SignInFormValues>({ email: "", password: "" });
+  const form = useLocalForm<SignInFormValues>({ email: "muhammad.aliabbasanjum@gmail.com", password: "12345678" });
   const supabase = createClient();
 
   const onSubmit = form.handleSubmit(async ({ email, password }) => {

@@ -24,7 +24,7 @@ Desktop.ini
 .cursor/
 
 # ── Secrets & environment ───────────────────────────────────────────────────
-# Legacy / override files (not used — edit .env.development or .env.production instead)
+# Do not use .env or .env.local — only .env.development / .env.production per package
 .env
 .env.local
 .env.*.local

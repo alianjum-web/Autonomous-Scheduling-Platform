@@ -102,12 +102,12 @@ export function HelpScreen() {
 
       <section className="content-divider space-y-6">
         <SectionHeading icon={BookOpen}>Frequently asked questions</SectionHeading>
-        <div className="grid gap-4">
+        <div className="mx-auto grid max-w-3xl gap-4">
           {FAQ.map(({ q, a }) => (
             <Card key={q} className="transition-colors hover:border-primary/25">
               <CardContent className="space-y-2 p-6">
                 <h3 className="font-semibold leading-snug">{q}</h3>
-                <p className="text-sm leading-relaxed text-muted-foreground">{a}</p>
+                <p className="max-w-prose text-sm leading-relaxed text-muted-foreground">{a}</p>
               </CardContent>
             </Card>
           ))}

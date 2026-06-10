@@ -9,34 +9,62 @@ import { BAAComplianceBanner } from "@/components/common/molecules/BAACompliance
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
 import { useGetAIStatusQuery, useGetHealthQuery } from "@/components/common/store/healthApi";
 import { useGetBAAStatusQuery } from "@/components/common/store/settingsApi";
+import { formatStatusDetail, resolveOverallLabel } from "@/lib/health/formatStatusDetail";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
+type StatusTone = "ok" | "warn" | "error";
+
 function StatusRow({
   label,
-  ok,
+  tone,
   detail,
+  detailTitle,
 }: {
   label: string;
-  ok: boolean;
+  tone: StatusTone;
   detail?: string;
+  detailTitle?: string;
 }) {
+  const ok = tone === "ok";
+  const displayDetail = formatStatusDetail(detail, ok) ?? (ok ? "Operational" : "Unavailable");
+
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-border/70 py-3.5 last:border-0">
-      <div className="flex items-center gap-2.5">
+    <div className="flex items-start justify-between gap-4 border-b border-border/70 py-3.5 last:border-0">
+      <div className="flex min-w-0 items-center gap-2.5">
         {ok ? (
-          <CheckCircle2 className="size-4 text-success" aria-hidden />
+          <CheckCircle2 className="size-4 shrink-0 text-success" aria-hidden />
         ) : (
-          <XCircle className="size-4 text-destructive" aria-hidden />
+          <XCircle
+            className={cn(
+              "size-4 shrink-0",
+              tone === "warn" ? "text-warning" : "text-destructive",
+            )}
+            aria-hidden
+          />
         )}
         <span className="text-sm font-medium">{label}</span>
       </div>
-      <span className={cn("text-sm", ok ? "text-muted-foreground" : "text-destructive")}>
-        {detail ?? (ok ? "Operational" : "Unavailable")}
+      <span
+        className={cn(
+          "max-w-[min(100%,14rem)] shrink-0 text-right text-sm sm:max-w-xs",
+          ok && "text-muted-foreground",
+          tone === "warn" && "text-warning",
+          tone === "error" && "text-destructive",
+        )}
+        title={detailTitle ?? (detail !== displayDetail ? detail : undefined)}
+      >
+        {displayDetail}
       </span>
     </div>
   );
+}
+
+function aiRowTone(ok: boolean, configured: boolean, active: boolean): StatusTone {
+  if (ok) return "ok";
+  if (!configured && !active) return "warn";
+  return "error";
 }
 
 export function StatusScreen() {
@@ -51,8 +79,14 @@ export function StatusScreen() {
   } = useGetAIStatusQuery();
 
   const loading = isLoading || isFetching;
-  const allHealthy = health?.status === "healthy";
   const errorMessage = error ? "Unable to reach the API health endpoint." : null;
+  const overall = resolveOverallLabel(health?.status, health?.checks);
+  const cardBorder =
+    overall.tone === "success"
+      ? "border-success/30"
+      : overall.tone === "warning"
+        ? "border-warning/40"
+        : "border-destructive/40";
 
   return (
     <PageShell maxWidth="6xl" className="gap-10 pb-20">
@@ -78,7 +112,7 @@ export function StatusScreen() {
         }
       />
 
-      <Card className={cn("hero-glow", allHealthy ? "border-success/30" : "border-warning/40")}>
+      <Card className={cn("hero-glow", cardBorder)}>
         <CardHeader className="pb-4">
           <CardTitle className="flex items-center gap-2.5">
             <Activity className="size-5 text-primary" aria-hidden />
@@ -92,17 +126,27 @@ export function StatusScreen() {
             <p className="text-sm text-destructive">{errorMessage}</p>
           ) : health ? (
             <>
-              <p className="mb-5 text-sm capitalize text-muted-foreground">
+              <p className="mb-5 text-sm text-muted-foreground">
                 Overall:{" "}
-                <span className={cn("font-semibold", allHealthy ? "text-success" : "text-warning")}>
-                  {health.status}
+                <span
+                  className={cn(
+                    "font-semibold capitalize",
+                    overall.tone === "success" && "text-success",
+                    overall.tone === "warning" && "text-warning",
+                    overall.tone === "destructive" && "text-destructive",
+                  )}
+                >
+                  {overall.label}
                 </span>
               </p>
-              <StatusRow label="PostgreSQL (Supabase)" ok={health.checks.database} />
-              <StatusRow label="Redis (slot locks)" ok={health.checks.redis} />
+              <StatusRow
+                label="PostgreSQL (Supabase)"
+                tone={health.checks.database ? "ok" : "error"}
+              />
+              <StatusRow label="Redis (slot locks)" tone={health.checks.redis ? "ok" : "error"} />
               <StatusRow
                 label={`AI chat (${health.checks.ai_provider ?? "none"})`}
-                ok={health.checks.ai}
+                tone={health.checks.ai ? "ok" : "warn"}
                 detail={
                   health.checks.ai_latency_ms != null
                     ? `${health.checks.ai_latency_ms} ms`
@@ -114,7 +158,7 @@ export function StatusScreen() {
               {baa ? (
                 <StatusRow
                   label="HIPAA BAA (tenant)"
-                  ok={baa.ai_features_available}
+                  tone={baa.ai_features_available ? "ok" : "warn"}
                   detail={
                     baa.baa_signed
                       ? `Signed · ${baa.enforcement_enabled ? "enforced" : "dev mode"}`
@@ -149,21 +193,27 @@ export function StatusScreen() {
               </code>
               {aiStatus.hot_reload ? " · hot reload on" : ""}
             </p>
-            {aiStatus.providers.map((provider) => (
-              <StatusRow
-                key={provider.provider}
-                label={provider.provider}
-                ok={provider.ok}
-                detail={
-                  provider.error ??
-                  (provider.active_for_chat || provider.active_for_embedding
-                    ? `${provider.model ?? "—"}${provider.latency_ms != null ? ` · ${provider.latency_ms} ms` : ""}`
-                    : provider.configured
-                      ? "Standby"
-                      : "No API key / Ollama offline")
-                }
-              />
-            ))}
+            {aiStatus.providers.map((provider) => {
+              const active = provider.active_for_chat || provider.active_for_embedding;
+              const tone = aiRowTone(provider.ok, provider.configured, active);
+              const detail =
+                provider.error ??
+                (active
+                  ? `${provider.model ?? "—"}${provider.latency_ms != null ? ` · ${provider.latency_ms} ms` : ""}`
+                  : provider.configured
+                    ? "Standby"
+                    : "Not configured");
+
+              return (
+                <StatusRow
+                  key={provider.provider}
+                  label={provider.provider}
+                  tone={tone}
+                  detail={detail}
+                  detailTitle={provider.error ?? undefined}
+                />
+              );
+            })}
           </CardContent>
         </Card>
       ) : aiLoading ? (
@@ -182,7 +232,7 @@ export function StatusScreen() {
             </CardHeader>
             <CardContent className="text-sm leading-relaxed text-muted-foreground">
               FastAPI microservice at{" "}
-              <code className="rounded-md bg-muted px-1.5 py-0.5 text-xs">{apiBase}</code>
+              <code className="break-all rounded-md bg-muted px-1.5 py-0.5 text-xs">{apiBase}</code>
             </CardContent>
           </Card>
           <Card>

@@ -12,6 +12,28 @@ NAME_RE = re.compile(
     r"(?:my name is|i am|i'm|this is|name is)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})",
     re.IGNORECASE,
 )
+ISO_SLOT_RE = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}")
+SKIP_NAME_WORDS = frozenset({
+    "yes", "no", "ok", "okay", "thanks", "thank", "please", "what", "how", "when", "book",
+})
+
+
+def looks_like_name(text: str) -> bool:
+    """Heuristic for a bare name reply during booking (e.g. Jane Doe)."""
+    content = text.strip()
+    if not content or PHONE_RE.search(content) or ISO_SLOT_RE.search(content):
+        return False
+    match = NAME_RE.search(content)
+    if match:
+        return True
+    words = [w for w in content.split() if w]
+    if not 1 <= len(words) <= 4:
+        return False
+    if any(w.lower() in SKIP_NAME_WORDS for w in words):
+        return False
+    if any(ch.isdigit() for ch in content):
+        return False
+    return all(w[0].isalpha() and w[0].isupper() for w in words if w.isalpha())
 
 
 def match_slot_from_message(message: str, slots: list[str]) -> str | None:
@@ -22,6 +44,13 @@ def match_slot_from_message(message: str, slots: list[str]) -> str | None:
     normalized = message.strip().lower()
     if not normalized:
         return None
+
+    iso_match = ISO_SLOT_RE.search(message)
+    if iso_match:
+        fragment = iso_match.group(0)
+        for slot in slots:
+            if slot.startswith(fragment):
+                return slot
 
     for slot in slots:
         if slot in message:
@@ -66,10 +95,8 @@ def extract_patient_name(messages: list[dict[str, str]]) -> str | None:
         match = NAME_RE.search(content)
         if match:
             return match.group(1).strip()
-        words = content.strip().split()
-        if 2 <= len(words) <= 4 and all(w[0].isupper() for w in words if w):
-            if not any(ch.isdigit() for ch in content):
-                return content.strip()
+        if looks_like_name(content):
+            return content.strip()
     return None
 
 

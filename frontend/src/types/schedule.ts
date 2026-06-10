@@ -42,3 +42,23 @@ export interface UpdateAppointmentStatusRequest {
 export interface UpdateAppointmentResponse {
   appointment: Appointment;
 }
+
+export interface CalendarConfigResponse {
+  timezone: string;
+  calendar_provider: "none" | "google" | "mock";
+  google_calendar_id: string | null;
+  business_hours_start: number;
+  business_hours_end: number;
+  slot_duration_minutes: number;
+  google_connected: boolean;
+  uses_mock_slots: boolean;
+}
+
+export interface CalendarConfigUpdateRequest {
+  timezone: string;
+  calendar_provider: "none" | "google" | "mock";
+  google_calendar_id?: string | null;
+  business_hours_start: number;
+  business_hours_end: number;
+  slot_duration_minutes: number;
+}

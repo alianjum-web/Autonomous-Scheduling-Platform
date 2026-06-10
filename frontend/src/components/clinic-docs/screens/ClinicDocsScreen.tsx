@@ -70,10 +70,11 @@ export function ClinicDocsScreen() {
     return (
       <AccessGate
         title="Admin access required"
-        description="Only clinic administrators can upload and manage knowledge base documents."
+        description="You're signed in, but only clinic administrators can upload and manage knowledge base documents."
         icon={<FileSearch className="size-8" />}
         imageKey="docs"
         requireAdmin
+        signedIn
       />
     );
   }

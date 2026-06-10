@@ -14,3 +14,18 @@ export interface BAAStatusResponse {
 export interface BAAAcknowledgeResponse extends BAAStatusResponse {
   message?: string;
 }
+
+export interface ComplianceAuditEntry {
+  id: string;
+  action: string;
+  actor_id: string | null;
+  resource_type: string;
+  resource_id: string;
+  created_at: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface ComplianceReportResponse {
+  baa: BAAStatusResponse;
+  recent_audit: ComplianceAuditEntry[];
+}

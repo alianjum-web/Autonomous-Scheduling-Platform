@@ -60,7 +60,8 @@ export function MarketingShell({ children }: { children: React.ReactNode }) {
             <span className="hidden sm:inline">Symptra Scheduling</span>
           </Link>
 
-          <div className="hidden items-center gap-1 rounded-full border border-border/70 bg-muted/50 p-1 lg:flex">
+          <div className="hidden flex-1 items-center justify-center gap-1 px-2 lg:flex">
+            <div className="flex items-center gap-1 rounded-full border border-border/70 bg-muted/50 p-1">
             {NAV_LINKS.map(({ href, label }) => {
               const active = pathname === href;
               return (
@@ -76,9 +77,10 @@ export function MarketingShell({ children }: { children: React.ReactNode }) {
                 </Link>
               );
             })}
+            </div>
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <div className="hidden items-center gap-1 md:flex">
               {RESOURCE_LINKS.map(({ href, label }) => {
                 const active = pathname === href;
