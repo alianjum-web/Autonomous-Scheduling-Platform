@@ -1,0 +1,36 @@
+# Ping Render /health every 10 minutes so the free tier does not cold-sleep.
+# Root cause fix: idle Render services take 30–60s to wake; Vercel API calls time out.
+
+name: Render Keep-Alive
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: render-keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Wake Render API
+        env:
+          RENDER_API_URL: ${{ vars.RENDER_API_URL }}
+        run: |
+          URL="${RENDER_API_URL:-https://autonomous-scheduling-platform.onrender.com}"
+          URL="${URL%/}"
+          echo "Pinging ${URL}/health"
+          curl -fsS --max-time 120 "${URL}/health" | tee /tmp/health.json
+          python3 - <<'PY'
+          import json, sys
+          data = json.load(open("/tmp/health.json"))
+          status = data.get("status", "unknown")
+          checks = data.get("checks", {})
+          print(f"status={status} database={checks.get('database')} redis={checks.get('redis')} ai={checks.get('ai')}")
+          if status not in ("ok", "degraded"):
+              sys.exit(1)
+          PY

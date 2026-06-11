@@ -5,7 +5,7 @@ import { LayoutDashboard } from "lucide-react";
 
 import { DailyCalendarGrid } from "@/components/appointments/organisms/DailyCalendarGrid";
 import { Button } from "@/components/ui/button";
-import { useAdminGuard } from "@/components/common/hooks/useAdminGuard";
+import { useRoleGuard } from "@/components/common/hooks/useRoleGuard";
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
 import { LoadingScreen } from "@/components/common/molecules/LoadingScreen";
 import { PageShell } from "@/components/common/layout/PageShell";
@@ -25,7 +25,8 @@ import { useEscalateSessionMutation } from "@/components/patient-triage/store/tr
 
 export function FrontDeskWorkspace() {
   const dispatch = useAppDispatch();
-  const { isAdmin, loading: authLoading } = useAdminGuard();
+  const { isOwner, clinicRole, loading: authLoading } = useRoleGuard();
+  const canAccessFrontDesk = isOwner || clinicRole === "clinic_admin";
   const { tenantId, session } = useAuthSession();
   const [escalate] = useEscalateSessionMutation();
 
@@ -36,7 +37,7 @@ export function FrontDeskWorkspace() {
   const appointments = useAppSelector(selectAppointments);
   const selectedDate = useAppSelector(selectSelectedDate);
 
-  const { data } = useGetAppointmentsQuery(selectedDate, { skip: !isAdmin });
+  const { data } = useGetAppointmentsQuery(selectedDate, { skip: !canAccessFrontDesk });
 
   useEffect(() => {
     if (data?.appointments) dispatch(setAppointments(data.appointments));
@@ -54,11 +55,11 @@ export function FrontDeskWorkspace() {
       />
     );
   }
-  if (!isAdmin) {
+  if (!canAccessFrontDesk) {
     return (
       <AccessGate
-        title="Front-desk access required"
-        description="Your account needs clinic_admin or admin role in Supabase app metadata."
+        title="Owner dashboard only"
+        description="Doctors use the Doctor Dashboard. Front desk is for clinic owners and admin staff."
         icon={<LayoutDashboard className="size-8" />}
         imageKey="frontDesk"
         requireAdmin

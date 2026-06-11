@@ -1,41 +1,55 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const AUTH_ROUTES = [
-  "/sign-in",
-  "/sign-up",
-  "/forgot-password",
-  "/reset-password",
-  "/verify-email",
-  "/onboarding",
-  "/auth/",
-];
+import {
+  classifyRoute,
+  normalizeProfileRole,
+  postAuthDestination,
+  resolveRoleRedirect,
+  type ProxyProfile,
+} from "@/lib/proxy/roleAccess";
 
-const PUBLIC_ROUTES = ["/", "/privacy", "/terms", "/hipaa-notice", "/help", "/status"];
-
-const PROTECTED_ROUTES = [
-  "/chat",
-  "/front-desk",
-  "/appointments",
-  "/clinic-docs",
-  "/settings",
-  "/onboarding",
-];
-
-const ADMIN_ROUTES = ["/front-desk", "/appointments", "/clinic-docs"];
-
-const ADMIN_ROLES = new Set(["admin", "clinic_admin"]);
-
-function isRouteMatch(pathname: string, routes: string[]) {
-  return routes.some(
-    (route) =>
-      pathname === route ||
-      pathname.startsWith(`${route}/`) ||
-      (route.endsWith("/") && pathname.startsWith(route)),
-  );
+/** Preserve Supabase session cookies when proxy returns a redirect (avoids silent sign-out). */
+function redirectWithSessionCookies(url: URL, sessionResponse: NextResponse): NextResponse {
+  const redirectResponse = NextResponse.redirect(url);
+  sessionResponse.cookies.getAll().forEach(({ name, value }) => {
+    redirectResponse.cookies.set(name, value);
+  });
+  return redirectResponse;
 }
 
-export async function proxy(request: NextRequest) {
+async function loadProxyProfile(
+  supabase: ReturnType<typeof createServerClient>,
+  userId: string,
+): Promise<ProxyProfile | null> {
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("tenant_id, role")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!profile) return null;
+
+  return {
+    tenant_id: profile.tenant_id ?? null,
+    role: normalizeProfileRole(profile.role),
+  };
+}
+
+async function loadTenantSlug(
+  supabase: ReturnType<typeof createServerClient>,
+  tenantId: string,
+): Promise<string | null> {
+  const { data: tenant } = await supabase
+    .from("tenants")
+    .select("slug")
+    .eq("id", tenantId)
+    .maybeSingle();
+
+  return tenant?.slug ?? null;
+}
+
+export async function proxy(request: NextRequest): Promise<NextResponse> {
   let supabaseResponse = NextResponse.next({ request });
 
   const supabaseUrl =
@@ -50,20 +64,19 @@ export async function proxy(request: NextRequest) {
       : "placeholder-anon-key";
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options),
-          );
-        },
+    cookies: {
+      getAll(): ReturnType<NextRequest["cookies"]["getAll"]> {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet): void {
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+        supabaseResponse = NextResponse.next({ request });
+        cookiesToSet.forEach(({ name, value, options }) =>
+          supabaseResponse.cookies.set(name, value, options),
+        );
       },
     },
-  );
+  });
 
   const {
     data: { user },
@@ -75,62 +88,54 @@ export async function proxy(request: NextRequest) {
 
   supabaseResponse.headers.set("x-tenant-slug", subdomain);
 
-  const isAuthRoute = isRouteMatch(pathname, AUTH_ROUTES);
-  const isPublic = PUBLIC_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`),
-  );
-  const needsAuth = PROTECTED_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`),
-  );
-  const needsAdmin = ADMIN_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`),
-  );
+  const { isAuthRoute, isPublic, needsAuth } = classifyRoute(pathname);
 
   if (needsAuth && !user && !isAuthRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/sign-in";
     url.searchParams.set("next", pathname);
-    return NextResponse.redirect(url);
+    return redirectWithSessionCookies(url, supabaseResponse);
   }
 
   if (user && !isAuthRoute && !isPublic) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("tenant_id, role")
-      .eq("id", user.id)
-      .maybeSingle();
+    const profile = await loadProxyProfile(supabase, user.id);
 
-    if (!profile?.tenant_id && pathname !== "/onboarding") {
-      const url = request.nextUrl.clone();
-      url.pathname = "/onboarding";
-      return NextResponse.redirect(url);
+    let tenantSlug: string | null = null;
+    if (profile?.tenant_id && profile.role === "patient") {
+      tenantSlug = await loadTenantSlug(supabase, profile.tenant_id);
     }
 
-    if (needsAdmin && profile?.role && !ADMIN_ROLES.has(profile.role)) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/chat";
-      url.searchParams.set("notice", "staff_only");
-      return NextResponse.redirect(url);
+    const redirect = resolveRoleRedirect(pathname, profile, { needsAuth, tenantSlug });
+    if (redirect) {
+      return redirectWithSessionCookies(new URL(redirect.destination, request.url), supabaseResponse);
     }
   }
 
   if (user && pathname === "/onboarding") {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("tenant_id")
-      .eq("id", user.id)
-      .maybeSingle();
-
+    const profile = await loadProxyProfile(supabase, user.id);
     if (profile?.tenant_id) {
-      return NextResponse.redirect(new URL("/chat", request.url));
+      return redirectWithSessionCookies(
+        new URL(postAuthDestination(profile), request.url),
+        supabaseResponse,
+      );
     }
   }
 
   if (user && (pathname === "/sign-in" || pathname === "/sign-up")) {
-    return NextResponse.redirect(new URL("/chat", request.url));
+    const profile = await loadProxyProfile(supabase, user.id);
+    const invite = request.nextUrl.searchParams.get("invite");
+    if (pathname === "/sign-up" && invite) {
+      return supabaseResponse;
+    }
+    return redirectWithSessionCookies(
+      new URL(postAuthDestination(profile), request.url),
+      supabaseResponse,
+    );
   }
 
   return supabaseResponse;
 }
 
-export const config = { matcher: ["/((?!_next|favicon.ico|icon|apple-icon|api/).*)"] };
+export const config: { matcher: string[] } = {
+  matcher: ["/((?!_next|favicon.ico|icon|apple-icon|api/).*)"],
+};

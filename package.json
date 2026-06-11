@@ -31,6 +31,7 @@
     "db:push": "npm run db:push --prefix backend",
     "db:migration:new": "npm run db:migration:new --prefix backend --",
     "db:migration:list": "npm run db:migration:list --prefix backend",
-    "gen:types": "bash scripts/gen-supabase-types.sh"
+    "gen:types": "bash scripts/gen-supabase-types.sh",
+    "verify:render": "bash scripts/verify-render-health.sh"
   }
 }

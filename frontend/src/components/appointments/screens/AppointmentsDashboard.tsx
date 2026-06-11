@@ -23,7 +23,7 @@ import {
 } from "@/components/appointments/store/appointmentsSlice";
 import { MiniBarChart } from "@/components/common/atoms/MiniBarChart";
 import { StatCard } from "@/components/common/atoms/StatCard";
-import { useAdminGuard } from "@/components/common/hooks/useAdminGuard";
+import { useRoleGuard } from "@/components/common/hooks/useRoleGuard";
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
 import { LoadingScreen } from "@/components/common/molecules/LoadingScreen";
 import { PageShell } from "@/components/common/layout/PageShell";
@@ -41,7 +41,7 @@ interface DateFilterForm {
 
 export function AppointmentsDashboard() {
   const dispatch = useAppDispatch();
-  const { isAdmin, loading: authLoading } = useAdminGuard();
+  const { isStaff, loading: authLoading } = useRoleGuard();
   const { tenantId, session } = useAuthSession();
   useAppointmentSync(tenantId);
 
@@ -54,7 +54,7 @@ export function AppointmentsDashboard() {
   const formValues = useMemo(() => ({ selectedDate }), [selectedDate]);
   const form = useReduxForm<DateFilterForm>(formValues);
 
-  const { data, refetch } = useGetAppointmentsQuery(selectedDate, { skip: !isAdmin });
+  const { data, refetch } = useGetAppointmentsQuery(selectedDate, { skip: !isStaff });
 
   useEffect(() => {
     if (data?.appointments) dispatch(setAppointments(data.appointments));
@@ -72,7 +72,7 @@ export function AppointmentsDashboard() {
       />
     );
   }
-  if (!isAdmin) {
+  if (!isStaff) {
     return (
       <AccessGate
         title="Admin access required"

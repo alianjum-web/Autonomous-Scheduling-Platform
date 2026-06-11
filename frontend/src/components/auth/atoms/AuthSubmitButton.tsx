@@ -5,6 +5,7 @@ interface AuthSubmitButtonProps {
   loadingLabel: string;
   children: React.ReactNode;
   disabled?: boolean;
+  onClick?: () => void;
 }
 
 export function AuthSubmitButton({
@@ -12,9 +13,15 @@ export function AuthSubmitButton({
   loadingLabel,
   children,
   disabled,
+  onClick,
 }: AuthSubmitButtonProps) {
   return (
-    <Button type="submit" className="h-11 w-full text-base shadow-md" disabled={loading || disabled}>
+    <Button
+      type={onClick ? "button" : "submit"}
+      className="h-11 w-full text-base shadow-md"
+      disabled={loading || disabled}
+      onClick={onClick}
+    >
       {loading ? loadingLabel : children}
     </Button>
   );

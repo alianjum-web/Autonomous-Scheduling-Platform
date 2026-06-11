@@ -16,6 +16,8 @@ import { MessageRow } from "@/components/patient-triage/molecules/MessageRow";
 import { TriageStatusBar } from "@/components/patient-triage/molecules/TriageStatusBar";
 import { SlotBookingDrawer } from "@/components/patient-triage/organisms/SlotBookingDrawer";
 import { BookingConfirmation } from "@/components/patient-triage/molecules/BookingConfirmation";
+import type { GuestVisit } from "@/lib/booking/guestVisit";
+import { usePublicStreamingChat } from "@/components/booking/hooks/usePublicStreamingChat";
 import { useStreamingChat } from "@/components/patient-triage/hooks/useStreamingChat";
 import {
   selectAvailableSlots,
@@ -50,9 +52,20 @@ interface ChatMessageForm {
 
 interface LiveChatPanelProps {
   disabled?: boolean;
+  /** Public patient visit — no Supabase workspace membership. */
+  publicVisit?: GuestVisit;
+  /** Send intake chief complaint as the opening triage message. */
+  autoStartPublicVisit?: boolean;
+  /** After slot pick on public booking — go to patient details (no auth). */
+  onPublicSlotSelected?: (iso: string) => void;
 }
 
-export function LiveChatPanel({ disabled = false }: LiveChatPanelProps) {
+export function LiveChatPanel({
+  disabled = false,
+  publicVisit,
+  autoStartPublicVisit = false,
+  onPublicSlotSelected,
+}: LiveChatPanelProps) {
   const dispatch = useAppDispatch();
   const messages = useAppSelector(selectTriageMessages);
   const status = useAppSelector(selectTriageStatus);
@@ -68,7 +81,9 @@ export function LiveChatPanel({ disabled = false }: LiveChatPanelProps) {
   const slotsKey = useAppSelector(selectSlotsKey);
   const drawerOpen = useAppSelector(selectBookingDrawerOpen);
   const bookingComplete = useAppSelector(selectBookingComplete);
-  const { startChat, sendMessage } = useStreamingChat();
+  const staffChat = useStreamingChat();
+  const publicChat = usePublicStreamingChat(publicVisit ?? null);
+  const { startChat, sendMessage } = publicVisit ? publicChat : staffChat;
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const formValues = useMemo(() => ({ message: draftMessage }), [draftMessage]);
@@ -77,6 +92,19 @@ export function LiveChatPanel({ disabled = false }: LiveChatPanelProps) {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
+
+  const publicStartedRef = useRef(false);
+  useEffect(() => {
+    if (!publicVisit || !autoStartPublicVisit || publicStartedRef.current) return;
+    publicStartedRef.current = true;
+    const complaint = publicVisit.intake.chiefComplaint?.trim() ?? "";
+    void startChat().then(() => {
+      if (complaint) {
+        dispatch(addUserMessage(complaint));
+        void sendMessage(complaint);
+      }
+    });
+  }, [autoStartPublicVisit, dispatch, publicVisit, sendMessage, startChat]);
 
   const handleMessageChange = useCallback(
     (value: string) => {
@@ -89,6 +117,10 @@ export function LiveChatPanel({ disabled = false }: LiveChatPanelProps) {
   const handleSlotSelect = useCallback(
     async (iso: string) => {
       if (!sessionId || isStreaming) return;
+      if (publicVisit && onPublicSlotSelected) {
+        onPublicSlotSelected(iso);
+        return;
+      }
       const label =
         availableSlots.find((slot) => slot.iso === iso)?.label ??
         new Date(iso).toLocaleString();
@@ -96,7 +128,15 @@ export function LiveChatPanel({ disabled = false }: LiveChatPanelProps) {
       dispatch(addUserMessage(`I'd like ${label}`));
       await sendMessage(iso, { action: "select_slot", selected_slot: iso });
     },
-    [availableSlots, dispatch, isStreaming, sendMessage, sessionId],
+    [
+      availableSlots,
+      dispatch,
+      isStreaming,
+      onPublicSlotSelected,
+      publicVisit,
+      sendMessage,
+      sessionId,
+    ],
   );
 
   const onSubmit = form.handleSubmit(async ({ message }) => {

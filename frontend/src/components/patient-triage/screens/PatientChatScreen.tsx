@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Bot, Lock } from "lucide-react";
+import { useEffect } from "react";
+import { Bot, Building2, Lock } from "lucide-react";
 
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
 import { PageShell } from "@/components/common/layout/PageShell";
@@ -16,9 +17,16 @@ import { Card, CardContent } from "@/components/ui/card";
 export function PatientChatScreen() {
   const searchParams = useSearchParams();
   const staffNotice = searchParams.get("notice") === "staff_only";
-  const { session, loading } = useAuthSession();
-  const { data: baa } = useGetBAAStatusQuery(undefined, { skip: !session });
-  const chatBlocked = Boolean(session && baa && !baa.ai_features_available);
+  const { session, loading, tenantId, refreshSession } = useAuthSession();
+  const { data: baa } = useGetBAAStatusQuery(undefined, { skip: !session || !tenantId });
+  const chatBlocked = Boolean(session && tenantId && baa && !baa.ai_features_available);
+  const needsOnboarding = Boolean(session && !loading && !tenantId);
+
+  useEffect(() => {
+    if (session && !tenantId && !loading) {
+      void refreshSession();
+    }
+  }, [loading, refreshSession, session, tenantId]);
 
   return (
     <PageShell maxWidth="2xl" className="flex flex-1 flex-col gap-6 pb-12">
@@ -65,10 +73,30 @@ export function PatientChatScreen() {
         </Card>
       ) : null}
 
-      {session ? <BAAComplianceBanner context="chat" /> : null}
+      {needsOnboarding ? (
+        <Card className="border-warning/40 bg-warning/10">
+          <CardContent className="flex flex-col items-center gap-4 p-6 text-center sm:flex-row sm:text-left">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-warning/20 text-warning">
+              <Building2 className="size-6" aria-hidden />
+            </div>
+            <div className="flex-1 space-y-1">
+              <p className="font-medium">Finish clinic onboarding</p>
+              <p className="text-sm text-muted-foreground">
+                Your account is signed in but not linked to a clinic yet. Complete onboarding so
+                the API can create triage sessions.
+              </p>
+            </div>
+            <Button asChild size="sm">
+              <Link href="/onboarding">Complete onboarding</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {session && tenantId ? <BAAComplianceBanner context="chat" /> : null}
 
       <div className="hero-glow overflow-hidden rounded-2xl">
-        <LiveChatPanel disabled={(!loading && !session) || chatBlocked} />
+        <LiveChatPanel disabled={(!loading && !session) || needsOnboarding || chatBlocked} />
       </div>
 
       <p className="flex items-center justify-center gap-2 text-center text-xs text-muted-foreground">

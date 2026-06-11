@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timezone as dt_timezone
 from typing import Any, cast
 from uuid import uuid4
 
@@ -96,7 +96,8 @@ class SupabaseService:
                 .select(
                     "id, slug, name, hipaa_baa_signed_at, hipaa_baa_signed_by, created_at, "
                     "timezone, calendar_provider, google_calendar_id, "
-                    "business_hours_start, business_hours_end, slot_duration_minutes"
+                    "business_hours_start, business_hours_end, slot_duration_minutes, "
+                    "booking_enabled, booking_welcome_message"
                 )
                 .eq("id", tenant_id)
                 .limit(1)
@@ -104,6 +105,252 @@ class SupabaseService:
             )
             rows = _rows(_response_data(result))
             return rows[0] if rows else None
+
+        return await self._run(_fetch)
+
+    async def get_public_tenant_by_slug(self, slug: str) -> dict[str, Any] | None:
+        def _fetch() -> dict[str, Any] | None:
+            result = (
+                self.get_client()
+                .table("tenants")
+                .select("id, slug, name, booking_enabled, booking_welcome_message, hipaa_baa_signed_at")
+                .eq("slug", slug)
+                .eq("booking_enabled", True)
+                .limit(1)
+                .execute()
+            )
+            rows = _rows(_response_data(result))
+            return rows[0] if rows else None
+
+        return await self._run(_fetch)
+
+    async def get_tenant_by_slug(self, slug: str) -> dict[str, Any] | None:
+        def _fetch() -> dict[str, Any] | None:
+            result = (
+                self.get_client()
+                .table("tenants")
+                .select("id, slug, name, booking_enabled, booking_welcome_message")
+                .eq("slug", slug)
+                .limit(1)
+                .execute()
+            )
+            rows = _rows(_response_data(result))
+            return rows[0] if rows else None
+
+        return await self._run(_fetch)
+
+    async def update_booking_page(
+        self,
+        tenant_id: str,
+        *,
+        enabled: bool,
+        welcome_message: str | None,
+    ) -> dict[str, Any]:
+        patch: dict[str, Any] = {
+            "booking_enabled": enabled,
+            "booking_welcome_message": welcome_message,
+            "updated_at": datetime.now(dt_timezone.utc).isoformat(),
+        }
+
+        def _update() -> dict[str, Any]:
+            result = (
+                self.get_client()
+                .table("tenants")
+                .update(patch)
+                .eq("id", tenant_id)
+                .execute()
+            )
+            rows = _rows(_response_data(result))
+            if not rows:
+                raise RuntimeError("Tenant not found for booking page update")
+            return rows[0]
+
+        return await self._run(_update)
+
+    async def list_staff_invites(self, tenant_id: str) -> list[dict[str, Any]]:
+        def _fetch() -> list[dict[str, Any]]:
+            result = (
+                self.get_client()
+                .table("staff_invites")
+                .select("id, email, role, token, expires_at, accepted_at, created_at")
+                .eq("tenant_id", tenant_id)
+                .order("created_at", desc=True)
+                .execute()
+            )
+            return _rows(_response_data(result))
+
+        return await self._run(_fetch)
+
+    async def get_staff_invite_by_email(
+        self, tenant_id: str, email: str
+    ) -> dict[str, Any] | None:
+        def _fetch() -> dict[str, Any] | None:
+            result = (
+                self.get_client()
+                .table("staff_invites")
+                .select("*")
+                .eq("tenant_id", tenant_id)
+                .eq("email", email)
+                .limit(1)
+                .execute()
+            )
+            rows = _rows(_response_data(result))
+            return rows[0] if rows else None
+
+        return await self._run(_fetch)
+
+    async def get_staff_invite_by_token(self, token: str) -> dict[str, Any] | None:
+        def _fetch() -> dict[str, Any] | None:
+            result = (
+                self.get_client()
+                .table("staff_invites")
+                .select("*")
+                .eq("token", token)
+                .limit(1)
+                .execute()
+            )
+            rows = _rows(_response_data(result))
+            return rows[0] if rows else None
+
+        return await self._run(_fetch)
+
+    async def create_staff_invite(
+        self,
+        *,
+        tenant_id: str,
+        email: str,
+        role: str,
+        invited_by: str,
+    ) -> dict[str, Any]:
+        row = {
+            "tenant_id": tenant_id,
+            "email": email,
+            "role": role,
+            "invited_by": invited_by,
+            "token": str(uuid4()),
+        }
+
+        def _insert() -> dict[str, Any]:
+            result = self.get_client().table("staff_invites").insert(row).execute()
+            return _inserted_row(result)
+
+        return await self._run(_insert)
+
+    async def list_providers(self, tenant_id: str, *, active_only: bool = True) -> list[dict[str, Any]]:
+        def _fetch() -> list[dict[str, Any]]:
+            query = (
+                self.get_client()
+                .table("providers")
+                .select(
+                    "id, tenant_id, profile_id, display_name, specialty, is_active, "
+                    "availability_start, availability_end, slot_duration_minutes, created_at"
+                )
+                .eq("tenant_id", tenant_id)
+                .order("display_name")
+            )
+            if active_only:
+                query = query.eq("is_active", True)
+            result = query.execute()
+            return _rows(_response_data(result))
+
+        return await self._run(_fetch)
+
+    async def get_provider_by_profile(self, profile_id: str) -> dict[str, Any] | None:
+        def _fetch() -> dict[str, Any] | None:
+            result = (
+                self.get_client()
+                .table("providers")
+                .select("*")
+                .eq("profile_id", profile_id)
+                .eq("is_active", True)
+                .limit(1)
+                .execute()
+            )
+            rows = _rows(_response_data(result))
+            return rows[0] if rows else None
+
+        return await self._run(_fetch)
+
+    async def update_provider_availability(
+        self,
+        profile_id: str,
+        *,
+        availability_start: str,
+        availability_end: str,
+        slot_duration_minutes: int,
+        specialty: str | None = None,
+    ) -> dict[str, Any]:
+        def _update() -> dict[str, Any]:
+            payload: dict[str, Any] = {
+                "availability_start": availability_start,
+                "availability_end": availability_end,
+                "slot_duration_minutes": slot_duration_minutes,
+                "updated_at": datetime.now(dt_timezone.utc).isoformat(),
+            }
+            if specialty is not None:
+                payload["specialty"] = specialty
+            result = (
+                self.get_client()
+                .table("providers")
+                .update(payload)
+                .eq("profile_id", profile_id)
+                .execute()
+            )
+            rows = _rows(_response_data(result))
+            if not rows:
+                raise RuntimeError("Provider not found")
+            return rows[0]
+
+        return await self._run(_update)
+
+    async def deactivate_provider(self, tenant_id: str, profile_id: str) -> None:
+        def _deactivate() -> None:
+            self.get_client().table("providers").update(
+                {"is_active": False, "updated_at": datetime.now(dt_timezone.utc).isoformat()}
+            ).eq("tenant_id", tenant_id).eq("profile_id", profile_id).execute()
+            self.get_client().table("profiles").update(
+                {"tenant_id": None, "role": "patient", "updated_at": datetime.now(dt_timezone.utc).isoformat()}
+            ).eq("id", profile_id).eq("tenant_id", tenant_id).execute()
+
+        await self._run(_deactivate)
+
+    async def get_profile_tenant_id(self, user_id: str) -> str | None:
+        """Resolve tenant from profiles when JWT hook has not injected tenant_id yet."""
+
+        def _fetch() -> str | None:
+            result = (
+                self.get_client()
+                .table("profiles")
+                .select("tenant_id")
+                .eq("id", user_id)
+                .limit(1)
+                .execute()
+            )
+            rows = _rows(_response_data(result))
+            if not rows:
+                return None
+            tenant_id = rows[0].get("tenant_id")
+            return str(tenant_id) if tenant_id else None
+
+        return await self._run(_fetch)
+
+    async def get_profile_role(self, user_id: str) -> str | None:
+        """Resolve clinic role from profiles when JWT hook has not injected clinic_role yet."""
+
+        def _fetch() -> str | None:
+            result = (
+                self.get_client()
+                .table("profiles")
+                .select("role")
+                .eq("id", user_id)
+                .limit(1)
+                .execute()
+            )
+            rows = _rows(_response_data(result))
+            if not rows:
+                return None
+            role = rows[0].get("role")
+            return str(role) if role else None
 
         return await self._run(_fetch)
 
@@ -118,7 +365,7 @@ class SupabaseService:
         business_hours_end: int,
         slot_duration_minutes: int,
     ) -> dict[str, Any]:
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(dt_timezone.utc).isoformat()
         patch = {
             "timezone": timezone,
             "calendar_provider": calendar_provider,
@@ -168,7 +415,7 @@ class SupabaseService:
         return await self._run(_fetch)
 
     async def acknowledge_tenant_baa(self, tenant_id: str, user_id: str) -> dict[str, Any]:
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(dt_timezone.utc).isoformat()
 
         def _update() -> dict[str, Any]:
             result = (
@@ -328,7 +575,7 @@ class SupabaseService:
             self.get_client().table("patient_sessions").update({
                 "current_triage_status": "emergency",
                 "status": "active",
-                "escalated_at": datetime.now(timezone.utc).isoformat(),
+                "escalated_at": datetime.now(dt_timezone.utc).isoformat(),
                 "ai_summary": f"EMERGENCY DETECTED: {message_snippet[:200]}",
             }).eq("id", session_id).eq("tenant_id", tenant_id).execute()
 
@@ -349,7 +596,7 @@ class SupabaseService:
             "current_triage_status": "escalated_to_human",
             "ai_summary": ai_summary,
             "status": "active",
-            "escalated_at": datetime.now(timezone.utc).isoformat(),
+            "escalated_at": datetime.now(dt_timezone.utc).isoformat(),
         }
         if patient_name:
             patch["patient_name"] = patient_name
@@ -651,7 +898,10 @@ supabase_client = supabase_service
 warm_supabase_pool = supabase_service.warm_pool
 ping_supabase = supabase_service.ping
 get_tenant = supabase_service.get_tenant
+get_profile_tenant_id = supabase_service.get_profile_tenant_id
+get_profile_role = supabase_service.get_profile_role
 update_tenant_calendar_config = supabase_service.update_tenant_calendar_config
+update_booking_page = supabase_service.update_booking_page
 list_audit_logs = supabase_service.list_audit_logs
 acknowledge_tenant_baa = supabase_service.acknowledge_tenant_baa
 insert_audit_log = supabase_service.insert_audit_log

@@ -495,32 +495,150 @@ export type Database = {
           },
         ]
       }
+      providers: {
+        Row: {
+          availability_end: string
+          availability_start: string
+          created_at: string
+          display_name: string
+          id: string
+          is_active: boolean
+          profile_id: string
+          slot_duration_minutes: number
+          specialty: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          availability_end?: string
+          availability_start?: string
+          created_at?: string
+          display_name: string
+          id?: string
+          is_active?: boolean
+          profile_id: string
+          slot_duration_minutes?: number
+          specialty?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          availability_end?: string
+          availability_start?: string
+          created_at?: string
+          display_name?: string
+          id?: string
+          is_active?: boolean
+          profile_id?: string
+          slot_duration_minutes?: number
+          specialty?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "providers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_invites: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          role: string
+          tenant_id: string
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          role?: string
+          tenant_id: string
+          token?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          role?: string
+          tenant_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_invites_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
+          booking_enabled: boolean
+          booking_welcome_message: string | null
+          business_hours_end: number
+          business_hours_start: number
+          calendar_provider: string
           created_at: string
+          google_calendar_id: string | null
           hipaa_baa_signed_at: string | null
           hipaa_baa_signed_by: string | null
           id: string
           name: string
+          slot_duration_minutes: number
           slug: string
+          timezone: string
           updated_at: string
         }
         Insert: {
+          booking_enabled?: boolean
+          booking_welcome_message?: string | null
+          business_hours_end?: number
+          business_hours_start?: number
+          calendar_provider?: string
           created_at?: string
+          google_calendar_id?: string | null
           hipaa_baa_signed_at?: string | null
           hipaa_baa_signed_by?: string | null
           id?: string
           name: string
+          slot_duration_minutes?: number
           slug: string
+          timezone?: string
           updated_at?: string
         }
         Update: {
+          booking_enabled?: boolean
+          booking_welcome_message?: string | null
+          business_hours_end?: number
+          business_hours_start?: number
+          calendar_provider?: string
           created_at?: string
+          google_calendar_id?: string | null
           hipaa_baa_signed_at?: string | null
           hipaa_baa_signed_by?: string | null
           id?: string
           name?: string
+          slot_duration_minutes?: number
           slug?: string
+          timezone?: string
           updated_at?: string
         }
         Relationships: []
@@ -530,11 +648,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_staff_invite: { Args: { p_token: string }; Returns: string }
       complete_onboarding: {
         Args: { p_clinic_name: string; p_clinic_slug: string; p_role?: string }
         Returns: string
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      get_public_clinic: {
+        Args: { p_slug: string }
+        Returns: {
+          id: string
+          name: string
+          slug: string
+          welcome_message: string
+        }[]
+      }
+      join_clinic: { Args: { p_clinic_slug: string }; Returns: string }
       match_clinic_protocols: {
         Args: {
           match_count?: number
@@ -553,6 +682,17 @@ export type Database = {
         }[]
       }
       purge_expired_patient_sessions: { Args: never; Returns: number }
+      search_clinics: {
+        Args: { p_query: string }
+        Returns: {
+          name: string
+          slug: string
+        }[]
+      }
+      set_booking_page: {
+        Args: { p_enabled: boolean; p_welcome_message?: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

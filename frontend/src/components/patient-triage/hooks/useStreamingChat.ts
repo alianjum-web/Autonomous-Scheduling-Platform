@@ -8,11 +8,13 @@ import { useAuthSession } from "@/components/common/hooks/useAuthSession";
 import { useAppDispatch, useAppSelector } from "@/components/common/store/hooks";
 import {
   classifySseDataLine,
+  extractApiErrorMessage,
   extractBaaRequiredMessage,
+  extractTenantRequiredMessage,
   parseTriageStreamMeta,
   parseTriageWebSocketFrame,
 } from "@/lib/api/parsers";
-import { getBaaMessageFromRtkError } from "@/lib/api/rtkErrors";
+import { getAuthGateMessageFromRtkError } from "@/lib/api/rtkErrors";
 import { showToast } from "@/components/ui/toast";
 import { setAvailableSlots, setBookingConfirmed } from "@/components/patient-triage/store/bookingSlice";
 import { useCreateTriageSessionMutation } from "@/components/patient-triage/store/triageApi";
@@ -165,11 +167,12 @@ export function useStreamingChat(): UseStreamingChatReturn {
       if (!response.ok) {
         if (response.status === 403) {
           const body: unknown = await response.json().catch(() => null);
-          const baaMessage = extractBaaRequiredMessage(body);
-          if (baaMessage) {
-            dispatch(setError(baaMessage));
-            return;
-          }
+          const gateMessage =
+            extractBaaRequiredMessage(body) ??
+            extractTenantRequiredMessage(body) ??
+            extractApiErrorMessage(body, "Access denied.");
+          dispatch(setError(gateMessage));
+          return;
         }
         throw new Error(`Stream failed: ${response.status}`);
       }
@@ -260,13 +263,21 @@ export function useStreamingChat(): UseStreamingChatReturn {
   const startChat = useCallback(async () => {
     try {
       dispatch(setError(null));
+      let token = accessToken;
+      if (!token) {
+        const refreshed = await refreshSession();
+        token = refreshed?.access_token ?? null;
+      }
+      if (!token) {
+        dispatch(setError("Authentication required."));
+        return;
+      }
       const result = await createSession({}).unwrap();
       dispatch(setSessionId(result.session_id));
     } catch (err) {
-      const baaMessage = getBaaMessageFromRtkError(err);
-      dispatch(setError(baaMessage ?? "Failed to start chat session."));
+      dispatch(setError(getAuthGateMessageFromRtkError(err) ?? "Failed to start chat session."));
     }
-  }, [createSession, dispatch]);
+  }, [accessToken, createSession, dispatch, refreshSession]);
 
   const resumeStream = useCallback(async () => {
     dispatch(setError(null));

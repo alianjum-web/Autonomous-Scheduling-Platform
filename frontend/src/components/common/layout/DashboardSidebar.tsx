@@ -5,41 +5,45 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   Activity,
   BookOpen,
-  CalendarDays,
-  FileText,
   HelpCircle,
   Home,
-  LayoutDashboard,
   LogOut,
-  MessageSquare,
-  Settings,
   Stethoscope,
 } from "lucide-react";
 
+import {
+  selectClinicRole,
+  selectDefaultHome,
+} from "@/components/auth/store/authSelectors";
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
+import { navForRole } from "@/lib/nav/roleNav";
+import { ROLE_LABELS, type ClinicRole } from "@/types/auth";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
-
-const MAIN_NAV = [
-  { href: "/chat", label: "AI Chat", icon: MessageSquare },
-  { href: "/front-desk", label: "Front Desk", icon: LayoutDashboard },
-  { href: "/appointments", label: "Appointments", icon: CalendarDays },
-  { href: "/clinic-docs", label: "Clinic Docs", icon: FileText },
-] as const;
+import { useAppSelector } from "@/components/common/store/hooks";
 
 const SECONDARY_NAV = [
-  { href: "/settings", label: "Settings", icon: Settings },
   { href: "/help", label: "Help Center", icon: HelpCircle },
   { href: "/status", label: "System Status", icon: Activity },
 ] as const;
+
+function roleBadgeClass(role: ClinicRole | null) {
+  if (role === "admin") return "bg-primary/10 text-primary";
+  if (role === "doctor") return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400";
+  if (role === "clinic_admin") return "bg-blue-500/10 text-blue-700 dark:text-blue-400";
+  return "bg-muted text-muted-foreground";
+}
 
 export function DashboardSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { session } = useAuthSession();
-  const supabase = createClient();
+  const clinicRole = useAppSelector(selectClinicRole);
+  const defaultHome = useAppSelector(selectDefaultHome);
+  const mainNav = navForRole(clinicRole);
 
   const handleSignOut = async () => {
+    const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/");
     router.refresh();
@@ -48,7 +52,7 @@ export function DashboardSidebar() {
   return (
     <aside className="flex h-full w-[260px] shrink-0 flex-col border-r border-border/60 bg-sidebar">
       <div className="flex h-16 items-center gap-3 border-b border-border/60 px-5">
-        <Link href="/" className="flex items-center gap-3">
+        <Link href={defaultHome} className="flex items-center gap-3">
           <span className="flex size-10 items-center justify-center rounded-2xl bg-primary text-sm font-bold text-primary-foreground shadow-sm">
             <Stethoscope className="size-5" aria-hidden />
           </span>
@@ -60,6 +64,19 @@ export function DashboardSidebar() {
           </div>
         </Link>
       </div>
+
+      {clinicRole ? (
+        <div className="px-4 pt-4">
+          <span
+            className={cn(
+              "inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide",
+              roleBadgeClass(clinicRole),
+            )}
+          >
+            {ROLE_LABELS[clinicRole]}
+          </span>
+        </div>
+      ) : null}
 
       <nav className="flex flex-1 flex-col gap-6 overflow-y-auto p-4" aria-label="Dashboard">
         <div className="space-y-1">
@@ -78,7 +95,7 @@ export function DashboardSidebar() {
             <Home className="size-4 shrink-0" aria-hidden />
             Home
           </Link>
-          {MAIN_NAV.map(({ href, label, icon: Icon }) => {
+          {mainNav.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(`${href}/`);
             return (
               <Link

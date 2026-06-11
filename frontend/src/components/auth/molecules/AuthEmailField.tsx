@@ -8,6 +8,7 @@ interface AuthEmailFieldProps<T extends FieldValues> {
   name: FieldPath<T>;
   label?: string;
   placeholder?: string;
+  disabled?: boolean;
   rules?: RegisterOptions<T, FieldPath<T>>;
 }
 
@@ -16,6 +17,7 @@ export function AuthEmailField<T extends FieldValues>({
   name,
   label = "Email",
   placeholder = "you@clinic.com",
+  disabled,
   rules = { required: "Email is required" },
 }: AuthEmailFieldProps<T>) {
   return (
@@ -27,7 +29,13 @@ export function AuthEmailField<T extends FieldValues>({
         <FormItem>
           <FormLabel>{label}</FormLabel>
           <FormControl>
-            <Input type="email" autoComplete="email" placeholder={placeholder} {...field} />
+            <Input
+              type="email"
+              autoComplete="email"
+              placeholder={placeholder}
+              disabled={disabled}
+              {...field}
+            />
           </FormControl>
           <FormMessage />
         </FormItem>

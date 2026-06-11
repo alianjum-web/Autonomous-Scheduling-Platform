@@ -48,18 +48,20 @@ supabase/
 
 ### Database migrations
 
-Schema lives in `supabase/migrations/` (relative to this `backend/` directory). Run all Supabase CLI commands **from `backend/`**:
+Schema lives in `supabase/migrations/`. See [docs/DATABASE_MIGRATIONS.md](../docs/DATABASE_MIGRATIONS.md) for the full guide.
 
 ```bash
-npm install                    # Supabase CLI devDependency + Python venv setup via npm run setup
-npm run db:validate            # filename/layout checks
-npm run db:link -- --project-ref <ref>   # once
-npm run db:push                # apply pending migrations
-npm run db:migration:new -- add_feature  # new timestamped migration
-npm run db:migration:list      # compare local vs remote history
+npm install
+npx supabase login             # once
+npm run db:validate
+
+export SUPABASE_DB_PASSWORD='<database-password>'   # Database → Settings (not API keys)
+npm run db:link -- --project-ref <ref>              # once — password required at link
+npm run db:push                                     # apply pending migrations
+npm run gen:types                                   # from repo root or here
 ```
 
-Regenerate frontend types after schema changes: `npm run gen:types` (from repo root or here).
+New migration: `npm run db:migration:new -- feature_name` · History: `npm run db:migration:list`
 
 All endpoints require `Authorization: Bearer <supabase_jwt>` with a `tenant_id` claim.
 

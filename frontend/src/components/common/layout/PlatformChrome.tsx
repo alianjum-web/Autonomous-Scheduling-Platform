@@ -7,18 +7,20 @@ import { Menu, X } from "lucide-react";
 import { DashboardSidebar } from "@/components/common/layout/DashboardSidebar";
 import { DashboardTopbar } from "@/components/common/layout/DashboardTopbar";
 import { MarketingShell } from "@/components/common/layout/MarketingShell";
+import { useDoctorOnboardingGuard } from "@/components/common/hooks/useDoctorOnboardingGuard";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const MARKETING_ROUTES = new Set(["/", "/privacy", "/terms", "/hipaa-notice", "/help", "/status"]);
 
 function isMarketingRoute(pathname: string) {
-  return MARKETING_ROUTES.has(pathname);
+  return MARKETING_ROUTES.has(pathname) || pathname.startsWith("/book/");
 }
 
 export function PlatformChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [mobileNav, setMobileNav] = useState(false);
+  useDoctorOnboardingGuard();
 
   if (isMarketingRoute(pathname)) {
     return <MarketingShell>{children}</MarketingShell>;

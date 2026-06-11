@@ -1,8 +1,10 @@
 """Schedule HTTP routes — delegates all workflows to scheduling_service."""
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
-from app.core.security import get_tenant_id, get_user_id, require_admin
+from app.core.config import Settings, get_settings
+from app.core.security import get_tenant_id, get_user_id, require_owner, require_staff
+from app.schemas.public import BookingPageConfigRequest, BookingPageConfigResponse
 from app.schemas.schedule import (
     AppointmentUpdateRequest,
     BookRequest,
@@ -11,15 +13,54 @@ from app.schemas.schedule import (
     CalendarConfigUpdateRequest,
     CancelResponse,
 )
-from app.services import scheduling_service
+from app.services import scheduling_service, supabase_client
 
 router = APIRouter(prefix="/schedule", tags=["schedule"])
+
+
+@router.get("/booking-page", response_model=BookingPageConfigResponse)
+async def get_booking_page(
+    tenant_id: str = Depends(get_tenant_id),
+    settings: Settings = Depends(get_settings),
+    _owner: dict = Depends(require_owner),
+) -> BookingPageConfigResponse:
+    tenant = await supabase_client.get_tenant(tenant_id)
+    if tenant is None:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    slug = tenant.get("slug")
+    public_url = f"{settings.frontend_origin}/book/{slug}" if slug else None
+    return BookingPageConfigResponse(
+        enabled=bool(tenant.get("booking_enabled")),
+        welcome_message=tenant.get("booking_welcome_message"),
+        public_url=public_url,
+    )
+
+
+@router.put("/booking-page", response_model=BookingPageConfigResponse)
+async def update_booking_page(
+    body: BookingPageConfigRequest,
+    tenant_id: str = Depends(get_tenant_id),
+    settings: Settings = Depends(get_settings),
+    _owner: dict = Depends(require_owner),
+) -> BookingPageConfigResponse:
+    tenant = await supabase_client.update_booking_page(
+        tenant_id,
+        enabled=body.enabled,
+        welcome_message=body.welcome_message,
+    )
+    slug = tenant.get("slug")
+    public_url = f"{settings.frontend_origin}/book/{slug}" if slug and body.enabled else None
+    return BookingPageConfigResponse(
+        enabled=bool(tenant.get("booking_enabled")),
+        welcome_message=tenant.get("booking_welcome_message"),
+        public_url=public_url,
+    )
 
 
 @router.get("/calendar-config", response_model=CalendarConfigResponse)
 async def get_calendar_config(
     tenant_id: str = Depends(get_tenant_id),
-    _admin: dict = Depends(require_admin),
+    _owner: dict = Depends(require_owner),
 ) -> CalendarConfigResponse:
     return await scheduling_service.get_calendar_config(tenant_id)
 
@@ -29,7 +70,7 @@ async def update_calendar_config(
     body: CalendarConfigUpdateRequest,
     tenant_id: str = Depends(get_tenant_id),
     user_id: str = Depends(get_user_id),
-    _admin: dict = Depends(require_admin),
+    _owner: dict = Depends(require_owner),
 ) -> CalendarConfigResponse:
     return await scheduling_service.update_calendar_config(tenant_id, user_id, body)
 
@@ -49,7 +90,7 @@ async def list_available_slots(
 @router.get("/appointments")
 async def list_appointments(
     tenant_id: str = Depends(get_tenant_id),
-    _admin: dict = Depends(require_admin),
+    _staff: dict = Depends(require_staff),
     date: str | None = None,
 ):
     appointments = await scheduling_service.list_appointments(tenant_id, date=date)
@@ -61,7 +102,7 @@ async def update_appointment(
     appointment_id: str,
     body: AppointmentUpdateRequest,
     tenant_id: str = Depends(get_tenant_id),
-    _admin: dict = Depends(require_admin),
+    _staff: dict = Depends(require_staff),
 ):
     appointment = await scheduling_service.update_appointment(
         appointment_id, tenant_id, body.to_patch()
@@ -81,6 +122,6 @@ async def book_appointment(
 async def cancel_appointment(
     appointment_id: str,
     tenant_id: str = Depends(get_tenant_id),
-    _admin: dict = Depends(require_admin),
+    _staff: dict = Depends(require_staff),
 ) -> CancelResponse:
     return await scheduling_service.cancel_appointment(appointment_id, tenant_id)

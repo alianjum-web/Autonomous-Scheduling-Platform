@@ -1,6 +1,14 @@
 /** Auth / JWT claim types shared across slices and hooks. */
 
-export type ClinicRole = "patient" | "admin" | "clinic_admin";
+export type ClinicRole = "patient" | "clinic_admin" | "admin" | "doctor";
+
+/** Role labels shown in UI. */
+export const ROLE_LABELS: Record<ClinicRole, string> = {
+  patient: "Patient",
+  clinic_admin: "Staff",
+  admin: "Clinic owner",
+  doctor: "Doctor",
+};
 
 export interface AppMetadataClaims {
   role?: ClinicRole;
@@ -17,7 +25,7 @@ export interface AppJwtPayload {
 }
 
 export function isClinicRole(value: string | null | undefined): value is ClinicRole {
-  return value === "patient" || value === "admin" || value === "clinic_admin";
+  return value === "patient" || value === "admin" || value === "clinic_admin" || value === "doctor";
 }
 
 export function parseJwtPayload(token: string): AppJwtPayload | null {

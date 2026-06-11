@@ -112,8 +112,8 @@ export default function HomePage() {
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
               <Button asChild size="lg" className="h-12 gap-2 px-8 text-base shadow-md">
-                <Link href="/chat">
-                  Start patient chat
+                <Link href="/sign-up">
+                  Start free trial
                   <ArrowRight className="size-4" aria-hidden />
                 </Link>
               </Button>

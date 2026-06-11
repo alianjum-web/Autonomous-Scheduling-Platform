@@ -8,7 +8,11 @@ import {
   type ClinicRole,
 } from "@/types/auth";
 
-export const ADMIN_ROLES = new Set<ClinicRole>(["admin", "clinic_admin"]);
+export const STAFF_ROLES = new Set<ClinicRole>(["admin", "clinic_admin", "doctor"]);
+export const OWNER_ROLES = new Set<ClinicRole>(["admin"]);
+export const DOCTOR_ROLES = new Set<ClinicRole>(["doctor"]);
+/** @deprecated Use STAFF_ROLES — kept for backward compatibility. */
+export const ADMIN_ROLES = STAFF_ROLES;
 
 export interface AuthState {
   loading: boolean;
@@ -70,12 +74,24 @@ export function authStateFromSession(session: Session | null): AuthState {
 const authSlice = createSlice({
   name: "auth",
   initialState,
-  reducers: {
+    reducers: {
     setAuthLoading(state, action: PayloadAction<boolean>) {
       state.loading = action.payload;
     },
     setSession(state, action: PayloadAction<Session | null>) {
       return authStateFromSession(action.payload);
+    },
+    applyProfileFromDb(
+      state,
+      action: PayloadAction<{ tenant_id?: string | null; role?: string | null }>,
+    ) {
+      const { tenant_id, role } = action.payload;
+      if (tenant_id) {
+        state.tenantId = tenant_id;
+      }
+      if (isClinicRole(role)) {
+        state.clinicRole = role;
+      }
     },
     clearAuth() {
       return { ...initialState, loading: false, initialized: true };
@@ -83,5 +99,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { setAuthLoading, setSession, clearAuth } = authSlice.actions;
+export const { setAuthLoading, setSession, applyProfileFromDb, clearAuth } = authSlice.actions;
 export default authSlice.reducer;

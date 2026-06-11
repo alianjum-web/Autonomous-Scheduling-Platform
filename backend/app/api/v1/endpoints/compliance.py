@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 
-from app.core.security import get_tenant_id, get_user_id, require_admin
+from app.core.security import get_tenant_id, get_user_id, require_owner
 from app.schemas.compliance import BAAAcknowledgeResponse, BAAStatusResponse, ComplianceReportResponse
 from app.services.compliance import acknowledge_tenant_baa, get_baa_status, get_compliance_report
 
@@ -17,7 +17,7 @@ async def baa_status(tenant_id: str = Depends(get_tenant_id)) -> BAAStatusRespon
 async def acknowledge_baa(
     tenant_id: str = Depends(get_tenant_id),
     user_id: str = Depends(get_user_id),
-    _admin: dict = Depends(require_admin),
+    _owner: dict = Depends(require_owner),
 ) -> BAAAcknowledgeResponse:
     await acknowledge_tenant_baa(tenant_id, user_id)
     status = await get_baa_status(tenant_id)
@@ -27,7 +27,7 @@ async def acknowledge_baa(
 @router.get("/report", response_model=ComplianceReportResponse)
 async def compliance_report(
     tenant_id: str = Depends(get_tenant_id),
-    _admin: dict = Depends(require_admin),
+    _owner: dict = Depends(require_owner),
 ) -> ComplianceReportResponse:
     """Admin compliance summary — BAA status plus recent audit trail."""
     return await get_compliance_report(tenant_id)

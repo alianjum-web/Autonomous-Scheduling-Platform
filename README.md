@@ -125,19 +125,26 @@ The FastAPI service is the sole AI processing gateway. See [docs/ARCHITECTURE.md
 
 ### 1. Database
 
-Apply the schema to your Supabase project:
+Migration files: `backend/supabase/migrations/`. Full guide: [docs/DATABASE_MIGRATIONS.md](docs/DATABASE_MIGRATIONS.md).
+
+**One-time setup** — get your **project ref** from the Supabase dashboard URL and your **database password** from Database → Settings → Reset database password (not an API key).
 
 ```bash
 npm install --prefix backend
-npm run db:link -- --project-ref <ref>   # once
+cd backend && npx supabase login    # once
+
 npm run db:validate
-npm run db:push                          # applies backend/supabase/migrations/*.sql
+export SUPABASE_DB_PASSWORD='<database-password>'
+npm run db:link -- --project-ref <ref>   # once — must include password (see link.sh)
+npm run db:push                          # apply pending migrations
 npm run gen:types                        # sync frontend/src/types/database.ts
 ```
 
-Or run SQL manually in the Supabase SQL editor from `backend/supabase/migrations/`.
+**Each time you add a migration:** `npm run db:push` then `npm run gen:types`.
 
-Configure the **Custom Access Token Hook** in Supabase Dashboard → Authentication → Hooks, pointing to `public.custom_access_token_hook`.
+**Without CLI:** run SQL from `backend/supabase/migrations/` in the Supabase SQL Editor (in filename order).
+
+Configure the **Custom Access Token Hook** in Supabase Dashboard → Authentication → Hooks → `public.custom_access_token_hook`.
 
 ### 2. Environment Variables
 

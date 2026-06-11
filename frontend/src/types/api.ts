@@ -2,7 +2,7 @@
 
 import type { IngestUploadResponse } from "@/types/ingest";
 
-export type ApiErrorCode = "baa_required" | (string & {});
+export type ApiErrorCode = "baa_required" | "tenant_required" | (string & {});
 
 /** FastAPI validation / simple string errors. */
 export interface ApiErrorBody {

@@ -3,8 +3,9 @@ import type { Session } from "@supabase/supabase-js";
 
 import type { RootState } from "@/components/common/store";
 import type { ClinicRole } from "@/types/auth";
+import { defaultHomeForRole } from "@/lib/nav/roleNav";
 
-import { ADMIN_ROLES } from "./authSlice";
+import { DOCTOR_ROLES, OWNER_ROLES, STAFF_ROLES } from "./authSlice";
 
 export const selectAuth = (state: RootState) => state.auth;
 
@@ -15,8 +16,23 @@ export const selectTenantId = (state: RootState) => state.auth.tenantId;
 export const selectClinicRole = (state: RootState): ClinicRole | null => state.auth.clinicRole;
 export const selectIsAuthenticated = (state: RootState) => Boolean(state.auth.userId);
 
-export const selectIsAdmin = createSelector([selectClinicRole], (role) =>
-  role ? ADMIN_ROLES.has(role) : false,
+export const selectIsStaff = createSelector([selectClinicRole], (role) =>
+  role ? STAFF_ROLES.has(role) : false,
+);
+
+export const selectIsOwner = createSelector([selectClinicRole], (role) =>
+  role ? OWNER_ROLES.has(role) : false,
+);
+
+export const selectIsDoctor = createSelector([selectClinicRole], (role) =>
+  role ? DOCTOR_ROLES.has(role) : false,
+);
+
+/** @deprecated Use selectIsStaff */
+export const selectIsAdmin = selectIsStaff;
+
+export const selectDefaultHome = createSelector([selectClinicRole], (role) =>
+  defaultHomeForRole(role),
 );
 
 /** Reconstructs a minimal Supabase Session for legacy consumers. */

@@ -105,8 +105,7 @@ The `compliance-check` job runs `scripts/compliance/scan-codebase-for-phi-loggin
 ```bash
 cd frontend
 vercel link
-# Production deploys use Vercel dashboard env vars. For local reference only:
-vercel env pull .env.production
+vercel env pull .env.local
 ```
 
 ### Environment Variables (Vercel)
@@ -148,6 +147,16 @@ Connect the GitHub repository in the Render dashboard (branch: `main`, auto-depl
 
 Health check: `GET /health` (configure in Render service settings and Dockerfile).
 
+### Keep Render awake (free tier)
+
+Idle Render services **sleep**; the first request can take 30–60s and Vercel API calls may fail. The repo includes `.github/workflows/render-keepalive.yml` (pings `/health` every 10 minutes). After merging to `main`, enable **Actions** on the repo. Optional: set repository variable `RENDER_API_URL` if your API URL changes.
+
+Verify production from your machine:
+
+```bash
+npm run verify:render
+```
+
 ---
 
 ## Database — Supabase
@@ -156,10 +165,13 @@ Schema is versioned in `backend/supabase/migrations/`. The FastAPI backend owns 
 
 ### Local
 
+See [DATABASE_MIGRATIONS.md](./DATABASE_MIGRATIONS.md). Short version:
+
 ```bash
 npm install --prefix backend
-npm run db:link -- --project-ref <ref>   # once
 npm run db:validate
+export SUPABASE_DB_PASSWORD='<database-password>'
+npm run db:link -- --project-ref <ref>   # once
 npm run db:push
 npm run gen:types                        # refresh frontend/src/types/database.ts
 ```
@@ -177,8 +189,11 @@ Required GitHub secrets (production environment):
 |---|---|
 | `SUPABASE_ACCESS_TOKEN` | Supabase CLI auth ([Account → Access Tokens](https://supabase.com/dashboard/account/tokens)) |
 | `SUPABASE_PROJECT_REF` | Project ref from Supabase dashboard URL |
+| `SUPABASE_DB_PASSWORD` | Database password (Database → Settings) — required for `db push` in CI |
 
 Migrations run on `main` after quality gates pass. Vercel and Render deploy in parallel via GitHub webhooks.
+
+Local migration workflow: [DATABASE_MIGRATIONS.md](./DATABASE_MIGRATIONS.md).
 
 **Pre-launch checklist:**
 

@@ -110,10 +110,12 @@ jobs:
           missing=()
           [ -z "${{ secrets.SUPABASE_ACCESS_TOKEN }}" ] && missing+=("SUPABASE_ACCESS_TOKEN")
           [ -z "${{ secrets.SUPABASE_PROJECT_REF }}" ] && missing+=("SUPABASE_PROJECT_REF")
+          [ -z "${{ secrets.SUPABASE_DB_PASSWORD }}" ] && missing+=("SUPABASE_DB_PASSWORD")
           if [ "${#missing[@]}" -gt 0 ]; then
             echo "ERROR: Missing GitHub production secrets: ${missing[*]}" >&2
-            echo "SUPABASE_ACCESS_TOKEN — https://supabase.com/dashboard/account/tokens" >&2
-            echo "SUPABASE_PROJECT_REF  — project ref from dashboard URL" >&2
+            echo "SUPABASE_ACCESS_TOKEN  — https://supabase.com/dashboard/account/tokens" >&2
+            echo "SUPABASE_PROJECT_REF   — project ref from dashboard URL" >&2
+            echo "SUPABASE_DB_PASSWORD   — Database → Settings → database password" >&2
             echo "Add under: Repo → Settings → Environments → production → Secrets" >&2
             exit 1
           fi
@@ -127,3 +129,4 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}

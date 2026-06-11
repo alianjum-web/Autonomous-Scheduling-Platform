@@ -55,6 +55,23 @@ export function extractBaaRequiredMessage(body: unknown): string | null {
   return getApiErrorMessage(detail, "HIPAA BAA required before using AI chat.");
 }
 
+export function extractTenantRequiredMessage(body: unknown): string | null {
+  const err = parseFastApiErrorFromResponse(body);
+  if (!err) return null;
+  const detail: ApiErrorDetail = err.detail;
+  if (getApiErrorCode(detail) !== "tenant_required") return null;
+  return getApiErrorMessage(
+    detail,
+    "Complete clinic onboarding before using AI chat.",
+  );
+}
+
+export function extractApiErrorMessage(body: unknown, fallback: string): string {
+  const err = parseFastApiErrorFromResponse(body);
+  if (!err) return fallback;
+  return getApiErrorMessage(err.detail, fallback);
+}
+
 export type SseStreamEventKind = "done" | "meta" | "token";
 
 export function classifySseDataLine(data: string): SseStreamEventKind {

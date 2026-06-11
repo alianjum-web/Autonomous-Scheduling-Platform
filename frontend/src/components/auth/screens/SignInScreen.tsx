@@ -61,6 +61,7 @@ export function SignInScreen() {
       return;
     }
 
+    await supabase.auth.getSession();
     router.push(redirectTo);
     router.refresh();
   });

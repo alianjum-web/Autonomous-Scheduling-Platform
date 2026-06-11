@@ -14,6 +14,7 @@ import "@/components/patient-triage/store/bookingApi";
 import "@/components/patient-triage/store/triageApi";
 import "./healthApi";
 import "./settingsApi";
+import "./staffApi";
 
 export const makeStore = () =>
   configureStore({

@@ -33,6 +33,24 @@ export const bookingApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Calendar", "Compliance"],
     }),
+    getBookingPage: builder.query<
+      { enabled: boolean; welcome_message: string | null; public_url: string | null },
+      void
+    >({
+      query: () => "/v1/schedule/booking-page",
+      providesTags: ["Calendar"],
+    }),
+    updateBookingPage: builder.mutation<
+      { enabled: boolean; welcome_message: string | null; public_url: string | null },
+      { enabled: boolean; welcome_message?: string | null }
+    >({
+      query: (body) => ({
+        url: "/v1/schedule/booking-page",
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Calendar"],
+    }),
   }),
 });
 
@@ -41,4 +59,6 @@ export const {
   useBookAppointmentMutation,
   useGetCalendarConfigQuery,
   useUpdateCalendarConfigMutation,
+  useGetBookingPageQuery,
+  useUpdateBookingPageMutation,
 } = bookingApi;
