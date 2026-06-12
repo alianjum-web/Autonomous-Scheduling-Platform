@@ -2,8 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
+from slowapi import Limiter
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
@@ -50,17 +49,18 @@ def create_app() -> FastAPI:
     app = FastAPI(title=settings.app_name, lifespan=lifespan)
     app.state.limiter = limiter
     register_exception_handlers(app)
-    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     app.add_middleware(SlowAPIMiddleware)
     app.add_middleware(RequestTracingMiddleware)
 
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=[settings.frontend_origin],  # normalized — must match browser Origin exactly
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    cors_kwargs: dict = {
+        "allow_origins": settings.cors_allow_origins,
+        "allow_credentials": True,
+        "allow_methods": ["*"],
+        "allow_headers": ["*"],
+    }
+    if settings.cors_allow_origin_regex:
+        cors_kwargs["allow_origin_regex"] = settings.cors_allow_origin_regex
+    app.add_middleware(CORSMiddleware, **cors_kwargs)
 
     @app.middleware("http")
     async def security_headers(request: Request, call_next):

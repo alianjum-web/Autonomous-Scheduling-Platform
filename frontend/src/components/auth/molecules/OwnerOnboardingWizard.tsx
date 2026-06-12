@@ -1,18 +1,18 @@
 "use client";
 
+import { clinicBookingUrl } from "@/lib/nav/roleNav";
+
 import Link from "next/link";
 
 import { AuthBackButton } from "@/components/auth/atoms/AuthBackButton";
 import { AuthErrorBanner } from "@/components/auth/atoms/AuthErrorBanner";
 import { AuthSubmitButton } from "@/components/auth/atoms/AuthSubmitButton";
 import { AuthLayout } from "@/components/auth/layout/AuthLayout";
-import type { useOwnerOnboarding } from "@/components/auth/hooks/useOwnerOnboarding";
+import type { OwnerOnboardingWizardProps } from "@/components/auth/hooks/useOwnerOnboarding";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-
-type OwnerOnboardingWizardProps = ReturnType<typeof useOwnerOnboarding>;
 
 export function OwnerOnboardingWizard({
   step,
@@ -34,17 +34,15 @@ export function OwnerOnboardingWizard({
           <p>You will create your clinic, configure basics, and optionally invite doctors.</p>
           <p>
             Doctor?{" "}
-            <Link href="/sign-in" className="text-primary hover:underline">
+            <Link href="/accept-invite" className="text-primary hover:underline">
               Use your invitation link
             </Link>{" "}
             — do not use owner sign-up.
           </p>
           <p>
-            Patient?{" "}
-            <Link href="/book/harbor-medical-group" className="text-primary hover:underline">
-              Book without an account
-            </Link>
-            .
+            Patient? Use the booking link your clinic shares (e.g.{" "}
+            <span className="font-mono text-foreground">/clinic/your-clinic-slug</span>) — available
+            after you finish setup below.
           </p>
         </div>
         <AuthSubmitButton loading={false} loadingLabel="" onClick={() => void nextStep()}>
@@ -88,7 +86,7 @@ export function OwnerOnboardingWizard({
                   <FormLabel>Public booking URL</FormLabel>
                   <FormControl>
                     <div className="flex items-center rounded-md border border-input bg-background shadow-xs">
-                      <span className="px-3 text-sm text-muted-foreground">/book/</span>
+                      <span className="px-3 text-sm text-muted-foreground">/clinic/</span>
                       <Input className="border-0 shadow-none focus-visible:ring-0" {...field} />
                     </div>
                   </FormControl>
@@ -195,8 +193,8 @@ export function OwnerOnboardingWizard({
         {tenantSlug ? (
           <p className="rounded-lg border border-border bg-muted/40 px-3 py-2">
             Patient booking:{" "}
-            <Link href={`/book/${tenantSlug}`} className="font-medium text-primary hover:underline">
-              /book/{tenantSlug}
+            <Link href={clinicBookingUrl(tenantSlug)} className="font-medium text-primary hover:underline">
+              /clinic/{tenantSlug}
             </Link>
           </p>
         ) : null}

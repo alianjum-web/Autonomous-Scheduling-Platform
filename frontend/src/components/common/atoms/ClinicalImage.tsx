@@ -23,8 +23,22 @@ interface ClinicalImageProps {
   variant: ImageVariant;
   className?: string;
   priority?: boolean;
+  /** Prefer eager for above-the-fold / LCP images (hero, headers, access gates). */
+  loading?: "eager" | "lazy";
   /** When true, the image fills its positioned parent (auth panel, custom layouts). */
   fillParent?: boolean;
+}
+
+const ABOVE_FOLD_VARIANTS: ReadonlySet<ImageVariant> = new Set(["hero", "header"]);
+
+function resolveLoading(
+  variant: ImageVariant,
+  priority: boolean,
+  loading?: "eager" | "lazy",
+): "eager" | "lazy" | undefined {
+  if (loading) return loading;
+  if (priority || ABOVE_FOLD_VARIANTS.has(variant)) return "eager";
+  return undefined;
 }
 
 export function ClinicalImage({
@@ -32,9 +46,11 @@ export function ClinicalImage({
   variant,
   className,
   priority = false,
+  loading,
   fillParent = false,
 }: ClinicalImageProps) {
   const { alt, objectPosition } = IMAGE_ASSETS[asset];
+  const resolvedLoading = resolveLoading(variant, priority, loading);
 
   return (
     <Image
@@ -44,6 +60,7 @@ export function ClinicalImage({
       sizes={IMAGE_SIZES[variant]}
       quality={VARIANT_QUALITY[variant]}
       priority={priority}
+      loading={resolvedLoading}
       className={cn("object-cover", fillParent && "absolute inset-0", className)}
       style={{ objectPosition }}
     />

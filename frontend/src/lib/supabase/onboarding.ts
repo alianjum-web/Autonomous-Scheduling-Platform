@@ -1,14 +1,9 @@
 import { createClient } from "@/lib/supabase/client";
-import type { UserProfileFetchResult } from "@/types/supabase-profile";
+import { refreshAuthSessionOnce, resetSessionRefreshThrottle } from "@/lib/supabase/sessionRefresh";
 
 export interface CreateClinicInput {
   clinicName: string;
   clinicSlug: string;
-}
-
-export interface ClinicSearchResult {
-  slug: string;
-  name: string;
 }
 
 export async function createClinic(input: CreateClinicInput): Promise<string> {
@@ -25,50 +20,9 @@ export async function createClinic(input: CreateClinicInput): Promise<string> {
     throw new Error("Clinic setup failed — no workspace returned.");
   }
 
-  await supabase.auth.refreshSession();
+  resetSessionRefreshThrottle();
+  await refreshAuthSessionOnce(supabase);
   return data;
-}
-
-/** @deprecated Use createClinic or joinClinic instead. */
-export async function completeOnboarding(input: CreateClinicInput & { role?: string }): Promise<string> {
-  if (input.role === "patient") {
-    return joinClinic(input.clinicSlug);
-  }
-  return createClinic(input);
-}
-
-export async function joinClinic(clinicSlug: string): Promise<string> {
-  const supabase = createClient();
-  const normalized = normalizeClinicSlug(clinicSlug);
-  if (!normalized) {
-    throw new Error("Enter a clinic workspace URL (e.g. harbor-medical-group).");
-  }
-
-  const { data, error } = await supabase.rpc("join_clinic", {
-    p_clinic_slug: normalized,
-  });
-
-  if (error) throw formatOnboardingRpcError(error, "Join clinic");
-  if (typeof data !== "string" || !data) {
-    throw new Error("Could not join clinic — no workspace returned.");
-  }
-
-  await supabase.auth.refreshSession();
-  return data;
-}
-
-export async function searchClinics(query: string): Promise<ClinicSearchResult[]> {
-  const normalized = normalizeClinicSlug(query);
-  const searchQuery = normalized || query.trim();
-  if (searchQuery.length < 2) return [];
-
-  try {
-    return await runOnboardingRpc("Clinic search", (supabase) =>
-      supabase.rpc("search_clinics", { p_query: searchQuery }),
-    );
-  } catch {
-    return [];
-  }
 }
 
 export function slugifyClinicName(name: string): string {
@@ -103,33 +57,4 @@ function formatOnboardingRpcError(error: { message?: string; code?: string }, ac
     );
   }
   return new Error(message);
-}
-
-async function runOnboardingRpc<T>(
-  action: string,
-  run: (supabase: ReturnType<typeof createClient>) => PromiseLike<{ data: T | null; error: { message?: string; code?: string } | null }>,
-): Promise<T> {
-  const supabase = createClient();
-  const { data, error } = await run(supabase);
-  if (error) throw formatOnboardingRpcError(error, action);
-  return data as T;
-}
-
-export async function fetchUserProfile(): Promise<UserProfileFetchResult | null> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("tenant_id, full_name, role, tenants(name, slug)")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  return {
-    user,
-    profile: profile as UserProfileFetchResult["profile"],
-  };
 }

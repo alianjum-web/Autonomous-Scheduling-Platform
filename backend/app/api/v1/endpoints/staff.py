@@ -3,7 +3,20 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.config import Settings, get_settings
-from app.core.security import get_tenant_id, get_user_id, require_doctor, require_owner, require_staff
+from app.core.security import (
+    get_tenant_id,
+    get_user_id,
+    require_clinic_manager,
+    require_doctor,
+    require_owner,
+    require_staff,
+)
+from app.schemas.dashboard import (
+    DoctorDashboardResponse,
+    OwnerDashboardResponse,
+    TriageSessionListResponse,
+    TriageSessionSummary,
+)
 from app.schemas.staff import (
     ProviderAvailabilityRequest,
     ProviderListResponse,
@@ -13,7 +26,7 @@ from app.schemas.staff import (
     StaffInvitePreviewResponse,
     StaffInviteResponse,
 )
-from app.services import provider_service, staff_invite_service
+from app.services import dashboard_service, provider_service, staff_invite_service
 from app.services.provider_service import ProviderError
 from app.services.staff_invite_service import StaffInviteError
 
@@ -96,6 +109,42 @@ async def get_my_provider(
     except ProviderError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     return ProviderResponse.model_validate(provider)
+
+
+@router.get("/dashboard/owner", response_model=OwnerDashboardResponse)
+async def get_owner_dashboard(
+    tenant_id: str = Depends(get_tenant_id),
+    _manager: dict = Depends(require_clinic_manager),
+) -> OwnerDashboardResponse:
+    stats = await dashboard_service.get_owner_dashboard(tenant_id)
+    return OwnerDashboardResponse.model_validate(stats)
+
+
+@router.get("/dashboard/doctor", response_model=DoctorDashboardResponse)
+async def get_doctor_dashboard(
+    tenant_id: str = Depends(get_tenant_id),
+    user_id: str = Depends(get_user_id),
+    _doctor: dict = Depends(require_doctor),
+) -> DoctorDashboardResponse:
+    stats = await dashboard_service.get_doctor_dashboard(tenant_id, user_id)
+    return DoctorDashboardResponse.model_validate(stats)
+
+
+@router.get("/triage/sessions", response_model=TriageSessionListResponse)
+async def list_triage_sessions(
+    tenant_id: str = Depends(get_tenant_id),
+    _staff: dict = Depends(require_staff),
+    intake_only: bool = Query(default=False),
+    limit: int = Query(default=25, ge=1, le=100),
+) -> TriageSessionListResponse:
+    sessions = await dashboard_service.list_triage_sessions(
+        tenant_id,
+        intake_only=intake_only,
+        limit=limit,
+    )
+    return TriageSessionListResponse(
+        sessions=[TriageSessionSummary.model_validate(item) for item in sessions],
+    )
 
 
 @router.put("/doctors/me/availability", response_model=ProviderResponse)

@@ -31,10 +31,11 @@ function SignUpContent() {
   const searchParams = useSearchParams();
   const inviteToken = searchParams.get("invite") ?? "";
   const nextPath = searchParams.get("next") ?? "/onboarding";
-  const isDoctorInvite = Boolean(inviteToken);
+  const isStaffInvite = Boolean(inviteToken);
   const { data: invitePreview, isLoading: previewLoading } = usePreviewStaffInviteQuery(inviteToken, {
     skip: !inviteToken,
   });
+  const inviteRole = invitePreview?.role;
   const { submitError, setSubmitError, loading, setLoading, clearMessages } = useAuthSubmitState();
 
   const form = useLocalForm<SignUpFormValues>({
@@ -61,7 +62,7 @@ function SignUpContent() {
 
     setLoading(true);
     try {
-      const redirectNext = isDoctorInvite
+      const redirectNext = isStaffInvite
         ? nextPath || `/accept-invite?token=${inviteToken}`
         : "/onboarding";
       await signUpViaApi({
@@ -85,17 +86,26 @@ function SignUpContent() {
     }
   });
 
-  if (isDoctorInvite && previewLoading) {
+  if (isStaffInvite && previewLoading) {
     return <LoadingScreen message="Loading invitation…" />;
   }
 
+  const staffInviteTitle =
+    inviteRole === "doctor"
+      ? "Create your doctor account"
+      : inviteRole === "clinic_admin"
+        ? "Join as clinic staff"
+        : "Accept your invitation";
+
+  const staffInviteSubtitle = `Set a password for ${invitePreview?.email ?? "your invited email"}. Staff and doctors join by invitation only — no self-sign-up.`;
+
   return (
     <AuthLayout
-      title={isDoctorInvite ? "Create your doctor account" : "Start your clinic"}
+      title={isStaffInvite ? staffInviteTitle : "Start your clinic"}
       subtitle={
-        isDoctorInvite
-          ? `Set a password for ${invitePreview?.email ?? "your invited email"}. Doctors join by invitation only.`
-          : "Sign up as clinic owner. Patients book without an account; doctors join via invite."
+        isStaffInvite
+          ? staffInviteSubtitle
+          : "Clinic owners only. Patients book at /clinic/your-slug without an account."
       }
     >
       <Form {...form}>
@@ -118,7 +128,7 @@ function SignUpContent() {
             control={form.control}
             name="email"
             label="Email"
-            disabled={isDoctorInvite && Boolean(invitePreview?.email)}
+            disabled={isStaffInvite && Boolean(invitePreview?.email)}
           />
           <AuthPasswordField
             control={form.control}
@@ -138,13 +148,13 @@ function SignUpContent() {
           {submitError ? <AuthErrorBanner message={submitError} /> : null}
 
           <AuthSubmitButton loading={loading} loadingLabel="Creating account…">
-            {isDoctorInvite ? "Create password & continue" : "Create owner account"}
+            {isStaffInvite ? "Create password & continue" : "Create owner account"}
           </AuthSubmitButton>
         </form>
       </Form>
 
       <p className="text-center text-sm text-muted-foreground">
-        {isDoctorInvite ? (
+        {isStaffInvite ? (
           <>
             Already have an account?{" "}
             <Link href={`/sign-in?next=${encodeURIComponent(nextPath)}`} className="font-medium text-primary hover:underline">
@@ -153,8 +163,8 @@ function SignUpContent() {
           </>
         ) : (
           <>
-            Doctor? You need an{" "}
-            <Link href="/sign-in" className="font-medium text-primary hover:underline">
+            Doctor or staff? Use your{" "}
+            <Link href="/accept-invite" className="font-medium text-primary hover:underline">
               invitation link
             </Link>
             . Already have an account?{" "}

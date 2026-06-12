@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { refreshAuthSessionOnce, resetSessionRefreshThrottle } from "@/lib/supabase/sessionRefresh";
 
 export async function acceptStaffInvite(token: string): Promise<string> {
   const supabase = createClient();
@@ -11,6 +12,7 @@ export async function acceptStaffInvite(token: string): Promise<string> {
     throw new Error("Could not accept invite.");
   }
 
-  await supabase.auth.refreshSession();
+  resetSessionRefreshThrottle();
+  await refreshAuthSessionOnce(supabase);
   return data;
 }

@@ -16,7 +16,6 @@ export { StaffInvitePanel } from "./molecules/StaffInvitePanel";
 export { StaffPreferencesCard } from "./molecules/StaffPreferencesCard";
 export { BookingPagePanel } from "./molecules/BookingPagePanel";
 export { useSettingsActions } from "./hooks/useSettingsActions";
-export { AppNav } from "./organisms/AppNav";
 export { SiteFooter } from "./organisms/SiteFooter";
 export { SentryInit } from "./providers/SentryInit";
 export { ThemeProvider } from "./providers/ThemeProvider";

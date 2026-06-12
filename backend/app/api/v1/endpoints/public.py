@@ -40,12 +40,24 @@ async def _tenant_for_public_booking(slug: str) -> dict:
     if not normalized or not _SLUG_RE.match(normalized):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Clinic not found")
     tenant = await supabase_client.get_public_tenant_by_slug(normalized)
-    if tenant is None:
+    if tenant is not None:
+        return tenant
+    existing = await supabase_client.get_tenant_by_slug(normalized)
+    if existing is not None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="This clinic has not published a booking page yet.",
+            detail=(
+                "This clinic exists but has not published its booking page yet. "
+                "The clinic owner must sign in and publish it under Settings → Public booking page."
+            ),
         )
-    return tenant
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=(
+            f'No clinic registered at "{normalized}". '
+            "Use the booking link from your clinic — owners get their URL after sign-up and onboarding."
+        ),
+    )
 
 
 async def _guest_context(

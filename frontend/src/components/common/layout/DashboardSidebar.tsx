@@ -6,14 +6,16 @@ import {
   Activity,
   BookOpen,
   HelpCircle,
-  Home,
   LogOut,
   Stethoscope,
 } from "lucide-react";
 
 import {
+  selectAuthLoading,
+  selectAuthProfileReady,
   selectClinicRole,
   selectDefaultHome,
+  selectIsAuthenticated,
 } from "@/components/auth/store/authSelectors";
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
 import { navForRole } from "@/lib/nav/roleNav";
@@ -38,9 +40,13 @@ export function DashboardSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { session } = useAuthSession();
+  const authLoading = useAppSelector(selectAuthLoading);
+  const profileReady = useAppSelector(selectAuthProfileReady);
+  const isAuthenticated = useAppSelector(selectIsAuthenticated);
   const clinicRole = useAppSelector(selectClinicRole);
   const defaultHome = useAppSelector(selectDefaultHome);
   const mainNav = navForRole(clinicRole);
+  const navLoading = authLoading || (isAuthenticated && !profileReady);
 
   const handleSignOut = async () => {
     const supabase = createClient();
@@ -83,36 +89,32 @@ export function DashboardSidebar() {
           <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             Menu
           </p>
-          <Link
-            href="/"
-            className={cn(
-              "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
-              pathname === "/"
-                ? "sidebar-nav-active"
-                : "text-sidebar-foreground hover:bg-muted hover:text-foreground",
-            )}
-          >
-            <Home className="size-4 shrink-0" aria-hidden />
-            Home
-          </Link>
-          {mainNav.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || pathname.startsWith(`${href}/`);
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={cn(
-                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
-                  active
-                    ? "sidebar-nav-active"
-                    : "text-sidebar-foreground hover:bg-muted hover:text-foreground",
-                )}
-              >
-                <Icon className="size-4 shrink-0" aria-hidden />
-                {label}
-              </Link>
-            );
-          })}
+          {navLoading
+            ? Array.from({ length: 5 }, (_, index) => (
+                <div
+                  key={`nav-skeleton-${index}`}
+                  className="mx-3 h-10 animate-pulse rounded-xl bg-muted/60"
+                  aria-hidden
+                />
+              ))
+            : mainNav.map(({ href, label, icon: Icon }) => {
+                const active = pathname === href || pathname.startsWith(`${href}/`);
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={cn(
+                      "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
+                      active
+                        ? "sidebar-nav-active"
+                        : "text-sidebar-foreground hover:bg-muted hover:text-foreground",
+                    )}
+                  >
+                    <Icon className="size-4 shrink-0" aria-hidden />
+                    {label}
+                  </Link>
+                );
+              })}
         </div>
 
         <div className="space-y-1">

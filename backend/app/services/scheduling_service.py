@@ -22,6 +22,13 @@ from app.schemas.schedule import (
     CancelResponse,
 )
 from app.services import supabase_client
+
+
+async def _default_provider_name(tenant_id: str) -> str:
+    providers = await supabase_client.list_providers(tenant_id, active_only=True)
+    if providers:
+        return str(providers[0].get("display_name") or "General Practice")
+    return "General Practice"
 from app.services.supabase_client import AppointmentConflictError
 
 
@@ -65,7 +72,11 @@ async def update_appointment(
 
 async def book_appointment(tenant_id: str, request: BookRequest) -> BookResponse:
     slot_start = request.selected_slot or request.slot_start
-    lock_key = f"slot:{tenant_id}:{request.provider_name}:{slot_start}"
+    provider_name = (request.provider_name or "General Practice").strip()
+    if provider_name in {"", "General Practice"}:
+        provider_name = await _default_provider_name(tenant_id)
+
+    lock_key = f"slot:{tenant_id}:{provider_name}:{slot_start}"
 
     locked = await acquire_lock(lock_key, ttl=30)
     if not locked:
@@ -73,7 +84,7 @@ async def book_appointment(tenant_id: str, request: BookRequest) -> BookResponse
 
     try:
         existing = await supabase_client.find_conflicting_appointment(
-            tenant_id, request.provider_name, slot_start
+            tenant_id, provider_name, slot_start
         )
         if existing:
             raise SlotUnavailableError()
@@ -88,7 +99,7 @@ async def book_appointment(tenant_id: str, request: BookRequest) -> BookResponse
             slot_end=end_dt.isoformat(),
             patient_name=request.patient_name,
             confirmation_code=confirmation_code,
-            provider=request.provider_name,
+            provider=provider_name,
             treatment=request.treatment_type,
         )
 
@@ -102,7 +113,7 @@ async def book_appointment(tenant_id: str, request: BookRequest) -> BookResponse
                 slot_end=end_dt.isoformat(),
                 confirmation_code=confirmation_code,
                 calendar_event_id=calendar_event_id,
-                provider_name=request.provider_name,
+                provider_name=provider_name,
                 treatment_type=request.treatment_type,
             )
         except AppointmentConflictError:
@@ -111,6 +122,15 @@ async def book_appointment(tenant_id: str, request: BookRequest) -> BookResponse
             raise SlotUnavailableError() from None
 
         if request.session_id:
+            await supabase_client.merge_session_metadata(
+                request.session_id,
+                tenant_id,
+                {
+                    "patient_name": request.patient_name,
+                    "patient_phone": request.patient_phone,
+                    "intake_pending": False,
+                },
+            )
             await supabase_client.update_session_triage_status(
                 request.session_id, tenant_id, "confirmed"
             )

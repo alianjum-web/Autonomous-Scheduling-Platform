@@ -16,7 +16,7 @@ async def retrieve_context(
     docs = await supabase_client.match_clinic_protocols(
         query_embedding=query_embedding,
         tenant_id=tenant_id,
-        match_threshold=0.78,
+        match_threshold=0.72,
         match_count=match_count,
     )
     if category_filter:

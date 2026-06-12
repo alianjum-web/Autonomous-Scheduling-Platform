@@ -1,4 +1,5 @@
 import type { PatientIntake } from "@/lib/booking/guestVisit";
+import { clinicBookingUrl } from "@/lib/nav/roleNav";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -83,7 +84,7 @@ export async function createPublicTriageSession(
 
 export function publicBookingUrl(slug: string): string {
   if (typeof window !== "undefined") {
-    return `${window.location.origin}/book/${slug}`;
+    return `${window.location.origin}${clinicBookingUrl(slug)}`;
   }
-  return `/book/${slug}`;
+  return clinicBookingUrl(slug);
 }

@@ -154,7 +154,7 @@ export function usePublicStreamingChat(visit: GuestVisit | null): UseStreamingCh
         dispatch(setError("Failed to get response. Please try again."));
       }
     },
-    [applyStreamMeta, dispatch, messages, sessionId, visit?.guestToken, visit?.sessionId, visit?.slug],
+    [applyStreamMeta, dispatch, messages, sessionId, visit],
   );
 
   const startChat = useCallback(async () => {

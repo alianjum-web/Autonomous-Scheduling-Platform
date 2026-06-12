@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PendingInviteRow, notifyInviteResult } from "@/components/common/molecules/PendingInviteRow";
 import { showToast } from "@/components/ui/toast";
 
 export function StaffInvitePanel() {
@@ -22,12 +23,9 @@ export function StaffInvitePanel() {
     const trimmed = email.trim();
     if (!trimmed) return;
     try {
-      await createInvite({ email: trimmed }).unwrap();
+      const result = await createInvite({ email: trimmed }).unwrap();
       setEmail("");
-      showToast({
-        title: "Invite sent",
-        description: `Staff invitation email sent to ${trimmed}.`,
-      });
+      notifyInviteResult(trimmed, result);
     } catch (err) {
       showToast({
         title: "Could not send invite",
@@ -76,15 +74,9 @@ export function StaffInvitePanel() {
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Loading invites…</p>
         ) : pending.length > 0 ? (
-          <ul className="space-y-2 text-sm">
+          <ul className="space-y-2">
             {pending.map((invite) => (
-              <li
-                key={invite.id}
-                className="flex items-center justify-between gap-2 rounded-lg border border-border/60 px-3 py-2"
-              >
-                <span>{invite.email}</span>
-                <span className="text-xs text-muted-foreground">Pending</span>
-              </li>
+              <PendingInviteRow key={invite.id} email={invite.email} token={invite.token} />
             ))}
           </ul>
         ) : (

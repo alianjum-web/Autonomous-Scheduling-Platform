@@ -3,9 +3,9 @@ import type { Session } from "@supabase/supabase-js";
 
 import type { RootState } from "@/components/common/store";
 import type { ClinicRole } from "@/types/auth";
-import { defaultHomeForRole } from "@/lib/nav/roleNav";
+import { defaultHomeForRole, dashboardHrefForAuth } from "@/lib/nav/roleNav";
 
-import { DOCTOR_ROLES, OWNER_ROLES, STAFF_ROLES } from "./authSlice";
+import { CLINIC_MANAGER_ROLES, DOCTOR_ROLES, OWNER_ROLES, STAFF_ROLES } from "./authRoles";
 
 export const selectAuth = (state: RootState) => state.auth;
 
@@ -14,7 +14,8 @@ export const selectAuthInitialized = (state: RootState) => state.auth.initialize
 export const selectAccessToken = (state: RootState) => state.auth.accessToken;
 export const selectTenantId = (state: RootState) => state.auth.tenantId;
 export const selectClinicRole = (state: RootState): ClinicRole | null => state.auth.clinicRole;
-export const selectIsAuthenticated = (state: RootState) => Boolean(state.auth.userId);
+export const selectIsAuthenticated = (state: RootState) =>
+  Boolean(state.auth.userId && state.auth.accessToken);
 
 export const selectIsStaff = createSelector([selectClinicRole], (role) =>
   role ? STAFF_ROLES.has(role) : false,
@@ -24,15 +25,28 @@ export const selectIsOwner = createSelector([selectClinicRole], (role) =>
   role ? OWNER_ROLES.has(role) : false,
 );
 
+export const selectIsClinicManager = createSelector([selectClinicRole], (role) =>
+  role ? CLINIC_MANAGER_ROLES.has(role) : false,
+);
+
 export const selectIsDoctor = createSelector([selectClinicRole], (role) =>
   role ? DOCTOR_ROLES.has(role) : false,
 );
 
-/** @deprecated Use selectIsStaff */
-export const selectIsAdmin = selectIsStaff;
+export const selectDefaultHome = createSelector(
+  [selectClinicRole, selectTenantId],
+  (role, tenantId) => defaultHomeForRole(role, tenantId),
+);
 
-export const selectDefaultHome = createSelector([selectClinicRole], (role) =>
-  defaultHomeForRole(role),
+export const selectDashboardHref = createSelector(
+  [selectIsAuthenticated, selectClinicRole, selectTenantId],
+  (isAuthenticated, role, tenantId) => dashboardHrefForAuth(isAuthenticated, role, tenantId),
+);
+
+/** True once we know the signed-in user's clinic role (or they are signed out). */
+export const selectAuthProfileReady = createSelector(
+  [selectIsAuthenticated, selectAuthInitialized, selectClinicRole],
+  (isAuthenticated, initialized, role) => !isAuthenticated || (initialized && role !== null),
 );
 
 /** Reconstructs a minimal Supabase Session for legacy consumers. */

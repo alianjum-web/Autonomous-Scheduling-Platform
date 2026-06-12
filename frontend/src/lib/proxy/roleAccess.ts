@@ -8,6 +8,7 @@ import { isClinicRole } from "@/types/auth";
 import {
   defaultHomeForRole,
   DOCTOR_ONLY_ROUTES,
+  OWNER_ADMIN_ROUTES,
   OWNER_ONLY_ROUTES,
 } from "@/lib/nav/roleNav";
 
@@ -30,15 +31,16 @@ export interface RouteFlags {
 /** Why the proxy chose to redirect (debugging / tests). */
 export type RoleRedirectReason =
   | "missing_tenant"
-  | "patient_to_booking"
-  | "non_staff_protected"
+  | "non_owner_onboarding"
+  | "non_staff_auth"
   | "doctor_front_desk"
   | "owner_doctor_route"
   | "non_owner_restricted"
   | "doctor_clinic_docs"
-  | "non_staff_auth"
   | "doctor_owner_onboarding"
-  | "owner_doctor_onboarding";
+  | "owner_doctor_onboarding"
+  | "doctor_ai_triage"
+  | "non_owner_ai_triage";
 
 /** A role-based redirect decision — `null` means allow the request through. */
 export interface RoleRedirect {
@@ -55,7 +57,6 @@ export const AUTH_ROUTES = [
   "/onboarding",
   "/accept-invite",
   "/doctor/onboarding",
-  "/join/",
   "/auth/",
 ] as const;
 
@@ -66,7 +67,7 @@ export const PUBLIC_ROUTES = [
   "/hipaa-notice",
   "/help",
   "/status",
-  "/book",
+  "/clinic",
 ] as const;
 
 export const PROTECTED_ROUTES = [
@@ -82,14 +83,22 @@ export const PROTECTED_ROUTES = [
   "/schedule",
   "/patients",
   "/billing",
+  "/doctor/intake",
+  "/doctor/triage",
 ] as const;
-
-export type AuthRoute = (typeof AUTH_ROUTES)[number];
-export type PublicRoute = (typeof PUBLIC_ROUTES)[number];
-export type ProtectedRoute = (typeof PROTECTED_ROUTES)[number];
 
 export function normalizeProfileRole(role: string | null | undefined): ClinicRole | null {
   return isClinicRole(role) ? role : null;
+}
+
+export function toProxyProfile(
+  row: { tenant_id?: string | null; role?: string | null } | null,
+): ProxyProfile | null {
+  if (!row) return null;
+  return {
+    tenant_id: row.tenant_id ?? null,
+    role: normalizeProfileRole(row.role),
+  };
 }
 
 export function isStaffRole(role: ClinicRole | null): role is StaffRole {
@@ -117,11 +126,6 @@ export function classifyRoute(pathname: string): RouteFlags {
   };
 }
 
-/** Default landing path after sign-in / onboarding for a role. */
-export function homeForRole(role: ClinicRole | null): string {
-  return defaultHomeForRole(role);
-}
-
 /**
  * Returns a redirect when the signed-in user's role may not access `pathname`.
  * Returns `null` when the request should proceed.
@@ -129,13 +133,13 @@ export function homeForRole(role: ClinicRole | null): string {
 export function resolveRoleRedirect(
   pathname: string,
   profile: ProxyProfile | null,
-  options: { needsAuth: boolean; tenantSlug?: string | null },
+  options: { needsAuth: boolean },
 ): RoleRedirect | null {
   if (!profile) return null;
 
-  const { needsAuth, tenantSlug } = options;
+  const { needsAuth } = options;
   const { role, tenant_id: tenantId } = profile;
-  const home = homeForRole(role);
+  const home = defaultHomeForRole(role, tenantId);
 
   if (
     !tenantId &&
@@ -157,12 +161,22 @@ export function resolveRoleRedirect(
     return { destination: "/front-desk", reason: "owner_doctor_onboarding" };
   }
 
-  if (tenantId && role === "patient" && tenantSlug && !pathname.startsWith("/book/")) {
-    return { destination: `/book/${tenantSlug}`, reason: "patient_to_booking" };
+  // Staff must join via invite — only owners create clinics on /onboarding.
+  if (
+    pathname === "/onboarding" &&
+    !tenantId &&
+    role &&
+    (role === "doctor" || role === "clinic_admin")
+  ) {
+    return { destination: "/accept-invite", reason: "non_owner_onboarding" };
   }
 
-  if (tenantId && role && !isStaffRole(role) && needsAuth) {
-    return { destination: home, reason: "non_staff_protected" };
+  if (role === "doctor" && isRouteMatch(pathname, OWNER_ADMIN_ROUTES)) {
+    return { destination: "/doctor/triage", reason: "doctor_ai_triage" };
+  }
+
+  if (role && role !== "admin" && role !== "clinic_admin" && isRouteMatch(pathname, OWNER_ADMIN_ROUTES)) {
+    return { destination: home, reason: "non_owner_ai_triage" };
   }
 
   if (role === "doctor" && pathname === "/front-desk") {
@@ -192,5 +206,5 @@ export function resolveRoleRedirect(
 export function postAuthDestination(profile: ProxyProfile | null): string {
   if (!profile?.tenant_id) return "/onboarding";
   if (profile.role === "doctor") return "/doctor/onboarding";
-  return homeForRole(profile.role);
+  return defaultHomeForRole(profile.role, profile.tenant_id);
 }

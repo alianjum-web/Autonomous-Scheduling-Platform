@@ -1,7 +1,8 @@
 import type { FetchBaseQueryError } from "@reduxjs/toolkit/query";
 
 import { baseApi } from "@/components/common/store/baseApi";
-import { createClient } from "@/lib/supabase/client";
+import type { RootState } from "@/components/common/store";
+import { readAccessToken } from "@/lib/supabase/accessToken";
 import { isIngestUploadResponse } from "@/types/api";
 import type { ClinicDocument, DocumentCategory, DocumentChunk, IngestionJob } from "@/types/clinic-docs";
 import type {
@@ -37,10 +38,8 @@ export const clinicDocsApi = baseApi.injectEndpoints({
       IngestUploadResponse,
       { file: File; category: DocumentCategory }
     >({
-      queryFn: async ({ file, category }) => {
-        const supabase = createClient();
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData.session?.access_token;
+      queryFn: async ({ file, category }, api) => {
+        const token = await readAccessToken(() => api.getState() as RootState);
         if (!token) {
           return {
             error: { status: 401, data: { detail: "Not authenticated" } } satisfies FetchBaseQueryError,

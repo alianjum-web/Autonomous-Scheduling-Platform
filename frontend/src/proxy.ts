@@ -1,19 +1,22 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { extractTenantSlugFromHost } from "@/lib/proxy/extractTenantSlug";
 import {
   classifyRoute,
-  normalizeProfileRole,
   postAuthDestination,
   resolveRoleRedirect,
+  toProxyProfile,
   type ProxyProfile,
 } from "@/lib/proxy/roleAccess";
+import { requireSupabaseEnv } from "@/lib/supabase/requireSupabaseEnv";
+import { PROFILE_ROUTING_SELECT } from "@/types/supabase-profile";
 
 /** Preserve Supabase session cookies when proxy returns a redirect (avoids silent sign-out). */
 function redirectWithSessionCookies(url: URL, sessionResponse: NextResponse): NextResponse {
   const redirectResponse = NextResponse.redirect(url);
-  sessionResponse.cookies.getAll().forEach(({ name, value }) => {
-    redirectResponse.cookies.set(name, value);
+  sessionResponse.cookies.getAll().forEach((cookie) => {
+    redirectResponse.cookies.set(cookie);
   });
   return redirectResponse;
 }
@@ -24,48 +27,21 @@ async function loadProxyProfile(
 ): Promise<ProxyProfile | null> {
   const { data: profile } = await supabase
     .from("profiles")
-    .select("tenant_id, role")
+    .select(PROFILE_ROUTING_SELECT)
     .eq("id", userId)
     .maybeSingle();
 
-  if (!profile) return null;
-
-  return {
-    tenant_id: profile.tenant_id ?? null,
-    role: normalizeProfileRole(profile.role),
-  };
-}
-
-async function loadTenantSlug(
-  supabase: ReturnType<typeof createServerClient>,
-  tenantId: string,
-): Promise<string | null> {
-  const { data: tenant } = await supabase
-    .from("tenants")
-    .select("slug")
-    .eq("id", tenantId)
-    .maybeSingle();
-
-  return tenant?.slug ?? null;
+  return toProxyProfile(profile);
 }
 
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   let supabaseResponse = NextResponse.next({ request });
 
-  const supabaseUrl =
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("your-project")
-      ? process.env.NEXT_PUBLIC_SUPABASE_URL
-      : "https://placeholder.supabase.co";
-  const supabaseKey =
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
-    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.includes("your-anon")
-      ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      : "placeholder-anon-key";
+  const { url: supabaseUrl, key: supabaseKey } = requireSupabaseEnv();
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
-      getAll(): ReturnType<NextRequest["cookies"]["getAll"]> {
+      getAll() {
         return request.cookies.getAll();
       },
       setAll(cookiesToSet): void {
@@ -83,10 +59,11 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
-  const host = request.headers.get("host") ?? "";
-  const subdomain = host.split(".")[0];
 
-  supabaseResponse.headers.set("x-tenant-slug", subdomain);
+  const tenantSlug = extractTenantSlugFromHost(request.headers.get("host") ?? "");
+  if (tenantSlug) {
+    supabaseResponse.headers.set("x-tenant-slug", tenantSlug);
+  }
 
   const { isAuthRoute, isPublic, needsAuth } = classifyRoute(pathname);
 
@@ -97,22 +74,23 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     return redirectWithSessionCookies(url, supabaseResponse);
   }
 
+  let profilePromise: Promise<ProxyProfile | null> | null = null;
+  const getProfile = (): Promise<ProxyProfile | null> => {
+    if (!user) return Promise.resolve(null);
+    profilePromise ??= loadProxyProfile(supabase, user.id);
+    return profilePromise;
+  };
+
   if (user && !isAuthRoute && !isPublic) {
-    const profile = await loadProxyProfile(supabase, user.id);
-
-    let tenantSlug: string | null = null;
-    if (profile?.tenant_id && profile.role === "patient") {
-      tenantSlug = await loadTenantSlug(supabase, profile.tenant_id);
-    }
-
-    const redirect = resolveRoleRedirect(pathname, profile, { needsAuth, tenantSlug });
+    const profile = await getProfile();
+    const redirect = resolveRoleRedirect(pathname, profile, { needsAuth });
     if (redirect) {
       return redirectWithSessionCookies(new URL(redirect.destination, request.url), supabaseResponse);
     }
   }
 
   if (user && pathname === "/onboarding") {
-    const profile = await loadProxyProfile(supabase, user.id);
+    const profile = await getProfile();
     if (profile?.tenant_id) {
       return redirectWithSessionCookies(
         new URL(postAuthDestination(profile), request.url),
@@ -122,11 +100,11 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   }
 
   if (user && (pathname === "/sign-in" || pathname === "/sign-up")) {
-    const profile = await loadProxyProfile(supabase, user.id);
     const invite = request.nextUrl.searchParams.get("invite");
     if (pathname === "/sign-up" && invite) {
       return supabaseResponse;
     }
+    const profile = await getProfile();
     return redirectWithSessionCookies(
       new URL(postAuthDestination(profile), request.url),
       supabaseResponse,

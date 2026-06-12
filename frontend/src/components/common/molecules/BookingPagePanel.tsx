@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,14 +16,39 @@ import {
 export function BookingPagePanel() {
   const { data, isLoading } = useGetBookingPageQuery();
   const [updateBookingPage, { isLoading: saving }] = useUpdateBookingPageMutation();
-  const [welcomeMessage, setWelcomeMessage] = useState("");
+  const [welcomeDraft, setWelcomeDraft] = useState<string | null>(null);
+  const [hoursDraft, setHoursDraft] = useState<string | null>(null);
+  const [servicesDraft, setServicesDraft] = useState<string | null>(null);
 
   const enabled = data?.enabled ?? false;
   const publicUrl = data?.public_url ?? null;
+  const welcomeMessage = welcomeDraft ?? data?.welcome_message ?? "";
+  const clinicHours = hoursDraft ?? data?.clinic_hours_info ?? "";
+  const clinicServices = servicesDraft ?? data?.clinic_services ?? "";
 
   if (isLoading) {
     return <p className="text-sm text-muted-foreground">Loading booking page settings…</p>;
   }
+
+  const saveAiKnowledge = async () => {
+    try {
+      await updateBookingPage({
+        enabled,
+        welcome_message: welcomeMessage || null,
+        clinic_hours_info: clinicHours || null,
+        clinic_services: clinicServices || null,
+      }).unwrap();
+      setWelcomeDraft(null);
+      setHoursDraft(null);
+      setServicesDraft(null);
+      showToast({
+        title: "AI knowledge saved",
+        description: "The intake assistant will use these details when patients ask questions.",
+      });
+    } catch {
+      showToast({ title: "Save failed", variant: "destructive" });
+    }
+  };
 
   return (
     <Card>
@@ -34,12 +60,20 @@ export function BookingPagePanel() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
-        <div className="flex items-center justify-between gap-4 rounded-lg border border-border/60 p-4">
+        <div className="flex flex-col gap-4 rounded-lg border border-border/60 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="font-medium">Publish booking page</p>
-            <p className="text-xs text-muted-foreground">Requires BAA signed before patients can use AI triage.</p>
+            <p className="text-xs text-muted-foreground">
+              {enabled
+                ? "Patients can book at your public clinic URL."
+                : "Turn this on so patients can visit your clinic page and book without an account."}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              BAA must be signed before patients can use AI triage.
+            </p>
           </div>
           <Button
+            className="shrink-0"
             variant={enabled ? "default" : "outline"}
             disabled={saving}
             onClick={async () => {
@@ -47,8 +81,11 @@ export function BookingPagePanel() {
               try {
                 await updateBookingPage({
                   enabled: next,
-                  welcome_message: welcomeMessage || data?.welcome_message || null,
+                  welcome_message: welcomeMessage || null,
+                  clinic_hours_info: clinicHours || null,
+                  clinic_services: clinicServices || null,
                 }).unwrap();
+                setWelcomeDraft(null);
                 showToast({
                   title: next ? "Booking page published" : "Booking page hidden",
                   description: next
@@ -73,9 +110,9 @@ export function BookingPagePanel() {
           <Textarea
             id="welcome"
             rows={3}
-            defaultValue={data?.welcome_message ?? ""}
+            value={welcomeMessage}
             placeholder="Welcome to Harbor Medical — book online in minutes."
-            onChange={(e) => setWelcomeMessage(e.target.value)}
+            onChange={(e) => setWelcomeDraft(e.target.value)}
           />
           <Button
             variant="outline"
@@ -86,7 +123,10 @@ export function BookingPagePanel() {
                 await updateBookingPage({
                   enabled,
                   welcome_message: welcomeMessage || null,
+                  clinic_hours_info: clinicHours || null,
+                  clinic_services: clinicServices || null,
                 }).unwrap();
+                setWelcomeDraft(null);
                 showToast({ title: "Welcome message saved" });
               } catch {
                 showToast({ title: "Save failed", variant: "destructive" });
@@ -94,6 +134,47 @@ export function BookingPagePanel() {
             }}
           >
             Save message
+          </Button>
+        </div>
+
+        <div className="space-y-4 rounded-lg border border-primary/20 bg-primary/5 p-4">
+          <div>
+            <p className="font-medium">AI intake assistant knowledge</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Patients often ask about clinic hours, services, and tests (e.g. blood group tests).
+              Add the facts here so the chat can answer like your front desk. You can also upload
+              FAQ PDFs under{" "}
+              <Link href="/clinic-docs" className="text-primary underline-offset-2 hover:underline">
+                Clinic Docs
+              </Link>
+              .
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="clinic-hours">Clinic hours</Label>
+            <Textarea
+              id="clinic-hours"
+              rows={2}
+              value={clinicHours}
+              placeholder="Mon–Sat 9:00 AM – 8:00 PM. Closed Sundays and public holidays."
+              onChange={(e) => setHoursDraft(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="clinic-services">Services offered</Label>
+            <Textarea
+              id="clinic-services"
+              rows={4}
+              value={clinicServices}
+              placeholder="Dental checkups, teeth cleaning, root canal, blood group test, CBC, X-ray, …"
+              onChange={(e) => setServicesDraft(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              List what you offer and what you do not (e.g. &quot;We do not offer MRI on-site&quot;).
+            </p>
+          </div>
+          <Button variant="secondary" size="sm" disabled={saving} onClick={() => void saveAiKnowledge()}>
+            Save AI knowledge
           </Button>
         </div>
 

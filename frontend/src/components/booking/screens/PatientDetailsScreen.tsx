@@ -2,8 +2,9 @@
 
 import { usePatientDetails } from "@/components/booking/hooks/usePatientDetails";
 import { PatientIntakeForm } from "@/components/booking/molecules/PatientIntakeForm";
-import type { PublicClinic } from "@/lib/booking/publicClinicApi";
 import Link from "next/link";
+import { clinicBookingUrl } from "@/lib/nav/roleNav";
+import type { PublicClinic } from "@/lib/booking/publicClinicApi";
 import { AuthErrorBanner } from "@/components/auth/atoms/AuthErrorBanner";
 import { AuthLayout } from "@/components/auth/layout/AuthLayout";
 
@@ -18,7 +19,7 @@ export function PatientDetailsScreen({ clinic }: PatientDetailsScreenProps) {
     return (
       <AuthLayout title="Select a time first" subtitle="Choose a slot during AI triage.">
         <AuthErrorBanner message="Go back to triage and pick an appointment time." />
-        <Link href={`/book/${clinic.slug}/visit`} className="mt-4 block text-center text-sm text-primary hover:underline">
+        <Link href={clinicBookingUrl(clinic.slug, "visit")} className="mt-4 block text-center text-sm text-primary hover:underline">
           Return to AI triage
         </Link>
       </AuthLayout>
@@ -32,9 +33,9 @@ export function PatientDetailsScreen({ clinic }: PatientDetailsScreenProps) {
       submitError={submitError}
       submitting={submitting}
       onSubmit={onSubmit}
-      title="Your details"
-      subtitle="Almost done — confirm your contact info to complete the booking."
-      submitLabel="Confirm appointment"
+      title="Patient intake form"
+      subtitle="Submit your details to complete the appointment — no account required."
+      submitLabel="Book appointment"
       showChiefComplaint={false}
     />
   );

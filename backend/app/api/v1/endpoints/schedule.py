@@ -3,7 +3,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.config import Settings, get_settings
-from app.core.security import get_tenant_id, get_user_id, require_owner, require_staff
+from app.core.security import (
+    get_tenant_id,
+    get_user_id,
+    require_clinic_manager,
+    require_owner,
+    require_staff,
+)
 from app.schemas.public import BookingPageConfigRequest, BookingPageConfigResponse
 from app.schemas.schedule import (
     AppointmentUpdateRequest,
@@ -22,17 +28,20 @@ router = APIRouter(prefix="/schedule", tags=["schedule"])
 async def get_booking_page(
     tenant_id: str = Depends(get_tenant_id),
     settings: Settings = Depends(get_settings),
-    _owner: dict = Depends(require_owner),
+    _manager: dict = Depends(require_clinic_manager),
 ) -> BookingPageConfigResponse:
     tenant = await supabase_client.get_tenant(tenant_id)
     if tenant is None:
         raise HTTPException(status_code=404, detail="Tenant not found")
     slug = tenant.get("slug")
-    public_url = f"{settings.frontend_origin}/book/{slug}" if slug else None
+    enabled = bool(tenant.get("booking_enabled"))
+    public_url = f"{settings.frontend_origin}/clinic/{slug}" if slug and enabled else None
     return BookingPageConfigResponse(
         enabled=bool(tenant.get("booking_enabled")),
         welcome_message=tenant.get("booking_welcome_message"),
         public_url=public_url,
+        clinic_hours_info=tenant.get("clinic_hours_info"),
+        clinic_services=tenant.get("clinic_services"),
     )
 
 
@@ -41,19 +50,23 @@ async def update_booking_page(
     body: BookingPageConfigRequest,
     tenant_id: str = Depends(get_tenant_id),
     settings: Settings = Depends(get_settings),
-    _owner: dict = Depends(require_owner),
+    _manager: dict = Depends(require_clinic_manager),
 ) -> BookingPageConfigResponse:
     tenant = await supabase_client.update_booking_page(
         tenant_id,
         enabled=body.enabled,
         welcome_message=body.welcome_message,
+        clinic_hours_info=body.clinic_hours_info,
+        clinic_services=body.clinic_services,
     )
     slug = tenant.get("slug")
-    public_url = f"{settings.frontend_origin}/book/{slug}" if slug and body.enabled else None
+    public_url = f"{settings.frontend_origin}/clinic/{slug}" if slug and body.enabled else None
     return BookingPageConfigResponse(
         enabled=bool(tenant.get("booking_enabled")),
         welcome_message=tenant.get("booking_welcome_message"),
         public_url=public_url,
+        clinic_hours_info=tenant.get("clinic_hours_info"),
+        clinic_services=tenant.get("clinic_services"),
     )
 
 

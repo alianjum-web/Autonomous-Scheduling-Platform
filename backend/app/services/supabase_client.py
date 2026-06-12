@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from datetime import datetime, timezone as dt_timezone
-from typing import Any, cast
+from typing import Any, Callable, TypeVar, cast
 from uuid import uuid4
 
+import httpx
 from supabase import Client, create_client
 
 from app.core.config import get_settings
@@ -17,6 +19,25 @@ from app.schemas.db import (
 )
 
 logger = get_logger(__name__)
+
+T = TypeVar("T")
+_TRANSIENT_UPSTREAM_ERRORS = (httpx.RemoteProtocolError, httpx.ReadError, httpx.ConnectError)
+
+
+def _run_with_retry(fn: Callable[[], T], *, attempts: int = 3) -> T:
+    """Retry transient Supabase/HTTP2 disconnects (common under parallel dev requests)."""
+    last_exc: Exception | None = None
+    for attempt in range(attempts):
+        try:
+            return fn()
+        except _TRANSIENT_UPSTREAM_ERRORS as exc:
+            last_exc = exc
+            if attempt + 1 >= attempts:
+                break
+            time.sleep(0.15 * (attempt + 1))
+            logger.warning("Supabase request retry", extra={"extra_data": {"attempt": attempt + 1}})
+    assert last_exc is not None
+    raise last_exc
 
 
 def _row(data: Any) -> dict[str, Any]:
@@ -45,6 +66,19 @@ def _response_data(response: Any) -> Any:
     return response.data
 
 
+def _maybe_single_row(response: Any) -> dict[str, Any] | None:
+    """maybe_single().execute() returns None when zero rows match."""
+    if response is None:
+        return None
+    return _optional_row(_response_data(response))
+
+
+def _metadata_dict(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return cast(dict[str, Any], value)
+    return {}
+
+
 def _inserted_row(response: Any) -> dict[str, Any]:
     rows = _rows(_response_data(response))
     if not rows:
@@ -70,7 +104,7 @@ class SupabaseService:
 
     @staticmethod
     async def _run(fn):
-        return await asyncio.to_thread(fn)
+        return await asyncio.to_thread(lambda: _run_with_retry(fn))
 
     async def warm_pool(self) -> None:
         await self._run(self.get_client)
@@ -90,21 +124,25 @@ class SupabaseService:
 
     async def get_tenant(self, tenant_id: str) -> dict[str, Any] | None:
         def _fetch() -> dict[str, Any] | None:
-            result = (
-                self.get_client()
-                .table("tenants")
-                .select(
-                    "id, slug, name, hipaa_baa_signed_at, hipaa_baa_signed_by, created_at, "
-                    "timezone, calendar_provider, google_calendar_id, "
-                    "business_hours_start, business_hours_end, slot_duration_minutes, "
-                    "booking_enabled, booking_welcome_message"
+            def _query() -> dict[str, Any] | None:
+                result = (
+                    self.get_client()
+                    .table("tenants")
+                    .select(
+                        "id, slug, name, hipaa_baa_signed_at, hipaa_baa_signed_by, created_at, "
+                        "timezone, calendar_provider, google_calendar_id, "
+                        "business_hours_start, business_hours_end, slot_duration_minutes, "
+                        "booking_enabled, booking_welcome_message, "
+                        "clinic_hours_info, clinic_services"
+                    )
+                    .eq("id", tenant_id)
+                    .limit(1)
+                    .execute()
                 )
-                .eq("id", tenant_id)
-                .limit(1)
-                .execute()
-            )
-            rows = _rows(_response_data(result))
-            return rows[0] if rows else None
+                rows = _rows(_response_data(result))
+                return rows[0] if rows else None
+
+            return _run_with_retry(_query)
 
         return await self._run(_fetch)
 
@@ -145,12 +183,18 @@ class SupabaseService:
         *,
         enabled: bool,
         welcome_message: str | None,
+        clinic_hours_info: str | None = None,
+        clinic_services: str | None = None,
     ) -> dict[str, Any]:
         patch: dict[str, Any] = {
             "booking_enabled": enabled,
             "booking_welcome_message": welcome_message,
             "updated_at": datetime.now(dt_timezone.utc).isoformat(),
         }
+        if clinic_hours_info is not None:
+            patch["clinic_hours_info"] = clinic_hours_info
+        if clinic_services is not None:
+            patch["clinic_services"] = clinic_services
 
         def _update() -> dict[str, Any]:
             result = (
@@ -490,7 +534,26 @@ class SupabaseService:
                 .maybe_single()
                 .execute()
             )
-            return cast(PatientSessionRow | None, _optional_row(_response_data(result)))
+            return cast(PatientSessionRow | None, _maybe_single_row(result))
+
+        return await self._run(_fetch)
+
+    async def list_patient_sessions(
+        self, tenant_id: str, *, limit: int = 25
+    ) -> list[dict[str, Any]]:
+        def _fetch() -> list[dict[str, Any]]:
+            result = (
+                self.get_client()
+                .table("patient_sessions")
+                .select(
+                    "id, tenant_id, status, metadata, current_triage_status, ai_summary, created_at, updated_at"
+                )
+                .eq("tenant_id", tenant_id)
+                .order("created_at", desc=True)
+                .limit(limit)
+                .execute()
+            )
+            return _rows(_response_data(result))
 
         return await self._run(_fetch)
 
@@ -536,13 +599,47 @@ class SupabaseService:
         message_history: list[dict],
         available_slots: list[str] | None = None,
     ) -> None:
-        metadata_patch: dict = {"available_slots": available_slots or []}
-
         def _update() -> None:
-            self.get_client().table("patient_sessions").update({
+            client = self.get_client()
+            existing = (
+                client.table("patient_sessions")
+                .select("metadata")
+                .eq("id", session_id)
+                .eq("tenant_id", tenant_id)
+                .maybe_single()
+                .execute()
+            )
+            row = _maybe_single_row(existing) or {}
+            prior = _metadata_dict(row.get("metadata"))
+            merged = {**prior, "available_slots": available_slots or []}
+            client.table("patient_sessions").update({
                 "current_triage_status": triage_status,
                 "message_history": message_history,
-                "metadata": metadata_patch,
+                "metadata": merged,
+            }).eq("id", session_id).eq("tenant_id", tenant_id).execute()
+
+        await self._run(_update)
+
+    async def merge_session_metadata(
+        self,
+        session_id: str,
+        tenant_id: str,
+        patch: dict[str, Any],
+    ) -> None:
+        def _update() -> None:
+            client = self.get_client()
+            existing = (
+                client.table("patient_sessions")
+                .select("metadata")
+                .eq("id", session_id)
+                .eq("tenant_id", tenant_id)
+                .maybe_single()
+                .execute()
+            )
+            row = _maybe_single_row(existing) or {}
+            prior = _metadata_dict(row.get("metadata"))
+            client.table("patient_sessions").update({
+                "metadata": {**prior, **patch},
             }).eq("id", session_id).eq("tenant_id", tenant_id).execute()
 
         await self._run(_update)
@@ -684,7 +781,7 @@ class SupabaseService:
                 .maybe_single()
                 .execute()
             )
-            return cast(AppointmentRow | None, _optional_row(_response_data(result)))
+            return cast(AppointmentRow | None, _maybe_single_row(result))
 
         return await self._run(_fetch)
 
@@ -703,7 +800,7 @@ class SupabaseService:
                 .maybe_single()
                 .execute()
             )
-            return _optional_row(_response_data(result))
+            return _maybe_single_row(result)
 
         return await self._run(_fetch)
 
@@ -745,7 +842,7 @@ class SupabaseService:
                 .maybe_single()
                 .execute()
             )
-            return cast(ClinicDocumentRow | None, _optional_row(_response_data(result)))
+            return cast(ClinicDocumentRow | None, _maybe_single_row(result))
 
         return await self._run(_fetch)
 
@@ -880,7 +977,7 @@ class SupabaseService:
                 .maybe_single()
                 .execute()
             )
-            return cast(IngestionJobRow | None, _optional_row(_response_data(result)))
+            return cast(IngestionJobRow | None, _maybe_single_row(result))
 
         return await self._run(_fetch)
 
@@ -898,10 +995,20 @@ supabase_client = supabase_service
 warm_supabase_pool = supabase_service.warm_pool
 ping_supabase = supabase_service.ping
 get_tenant = supabase_service.get_tenant
+get_public_tenant_by_slug = supabase_service.get_public_tenant_by_slug
+get_tenant_by_slug = supabase_service.get_tenant_by_slug
 get_profile_tenant_id = supabase_service.get_profile_tenant_id
 get_profile_role = supabase_service.get_profile_role
 update_tenant_calendar_config = supabase_service.update_tenant_calendar_config
 update_booking_page = supabase_service.update_booking_page
+list_providers = supabase_service.list_providers
+get_provider_by_profile = supabase_service.get_provider_by_profile
+deactivate_provider = supabase_service.deactivate_provider
+update_provider_availability = supabase_service.update_provider_availability
+list_staff_invites = supabase_service.list_staff_invites
+get_staff_invite_by_email = supabase_service.get_staff_invite_by_email
+create_staff_invite = supabase_service.create_staff_invite
+get_staff_invite_by_token = supabase_service.get_staff_invite_by_token
 list_audit_logs = supabase_service.list_audit_logs
 acknowledge_tenant_baa = supabase_service.acknowledge_tenant_baa
 insert_audit_log = supabase_service.insert_audit_log
@@ -909,6 +1016,7 @@ get_supabase_client = supabase_service.get_client
 
 create_patient_session = supabase_service.create_patient_session
 get_patient_session = supabase_service.get_patient_session
+list_patient_sessions = supabase_service.list_patient_sessions
 update_session_status = supabase_service.update_session_status
 save_session_thread = supabase_service.save_session_thread
 update_session_agent_state = supabase_service.update_session_agent_state

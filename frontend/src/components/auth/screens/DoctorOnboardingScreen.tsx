@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { AuthErrorBanner } from "@/components/auth/atoms/AuthErrorBanner";
 import { AuthSubmitButton } from "@/components/auth/atoms/AuthSubmitButton";
 import { AuthLayout } from "@/components/auth/layout/AuthLayout";
 import {
@@ -21,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { showToast } from "@/components/ui/toast";
 
-type Step = "profile" | "specialty" | "availability";
+type Step = "profile" | "availability" | "complete";
 
 export function DoctorOnboardingScreen() {
   const router = useRouter();
@@ -31,8 +30,14 @@ export function DoctorOnboardingScreen() {
   const [updateAvailability, { isLoading: saving }] = useUpdateMyAvailabilityMutation();
   const [step, setStep] = useState<Step>("profile");
   const [specialty, setSpecialty] = useState(provider?.specialty ?? "General Practice");
+  const [yearsExperience, setYearsExperience] = useState("5");
   const [start, setStart] = useState("09:00");
   const [end, setEnd] = useState("17:00");
+
+  const displayName =
+    provider?.display_name ??
+    (session?.user?.user_metadata?.full_name as string | undefined) ??
+    "Doctor";
 
   useEffect(() => {
     if (session?.user?.id && isDoctorOnboardingComplete(session.user.id)) {
@@ -45,16 +50,19 @@ export function DoctorOnboardingScreen() {
 
   const finish = async () => {
     try {
+      const yearsLabel = yearsExperience.trim() ? `${yearsExperience.trim()} years` : "";
+      const specialtyLabel = [specialty.trim() || "General Practice", yearsLabel]
+        .filter(Boolean)
+        .join(" · ");
+
       await updateAvailability({
         availability_start: start,
         availability_end: end,
         slot_duration_minutes: provider?.slot_duration_minutes ?? 30,
-        specialty: specialty.trim() || "General Practice",
+        specialty: specialtyLabel,
       }).unwrap();
       markDoctorOnboardingComplete(session.user.id);
-      showToast({ title: "Profile complete", description: "Welcome to your doctor dashboard." });
-      router.push("/doctor");
-      router.refresh();
+      setStep("complete");
     } catch {
       showToast({ title: "Could not save availability", variant: "destructive" });
     }
@@ -62,23 +70,28 @@ export function DoctorOnboardingScreen() {
 
   if (step === "profile") {
     return (
-      <AuthLayout title="Complete your profile" subtitle="Step 1 of 3 — doctor setup">
-        <p className="text-sm text-muted-foreground">
-          Signed in as <strong className="text-foreground">{session.user.email}</strong>
-        </p>
-        <AuthSubmitButton loading={false} loadingLabel="" onClick={() => setStep("specialty")}>
-          Continue
-        </AuthSubmitButton>
-      </AuthLayout>
-    );
-  }
-
-  if (step === "specialty") {
-    return (
-      <AuthLayout title="Specialization" subtitle="Step 2 of 3">
-        <div className="space-y-2">
-          <Label htmlFor="specialty">Your specialty</Label>
-          <Input id="specialty" value={specialty} onChange={(e) => setSpecialty(e.target.value)} />
+      <AuthLayout title={`Welcome, Dr. ${displayName}`} subtitle="Step 1 of 2 — quick profile setup">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="specialty">Specialization</Label>
+            <Input
+              id="specialty"
+              placeholder="e.g. Cardiology, General Practice"
+              value={specialty}
+              onChange={(e) => setSpecialty(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="years">Years of experience</Label>
+            <Input
+              id="years"
+              type="number"
+              min={0}
+              max={60}
+              value={yearsExperience}
+              onChange={(e) => setYearsExperience(e.target.value)}
+            />
+          </div>
         </div>
         <AuthSubmitButton loading={false} loadingLabel="" onClick={() => setStep("availability")}>
           Continue
@@ -87,20 +100,45 @@ export function DoctorOnboardingScreen() {
     );
   }
 
+  if (step === "availability") {
+    return (
+      <AuthLayout title="Availability" subtitle="Step 2 of 2 — when patients can book you">
+        <p className="text-sm text-muted-foreground">
+          Default hours for your bookable slots. You can change these anytime under Schedule.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="start">Start</Label>
+            <Input id="start" type="time" value={start} onChange={(e) => setStart(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="end">End</Label>
+            <Input id="end" type="time" value={end} onChange={(e) => setEnd(e.target.value)} />
+          </div>
+        </div>
+        <AuthSubmitButton loading={saving} loadingLabel="Saving…" onClick={() => void finish()}>
+          Finish setup
+        </AuthSubmitButton>
+      </AuthLayout>
+    );
+  }
+
   return (
-    <AuthLayout title="Availability" subtitle="Step 3 of 3 — when you accept appointments">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="start">Start</Label>
-          <Input id="start" type="time" value={start} onChange={(e) => setStart(e.target.value)} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="end">End</Label>
-          <Input id="end" type="time" value={end} onChange={(e) => setEnd(e.target.value)} />
-        </div>
-      </div>
-      <AuthSubmitButton loading={saving} loadingLabel="Saving…" onClick={() => void finish()}>
-        Finish setup
+    <AuthLayout title="Setup complete" subtitle="You're ready to see patients">
+      <p className="text-sm text-muted-foreground">
+        Your profile and availability are saved. Open your dashboard to view today&apos;s appointments
+        and AI triage summaries.
+      </p>
+      <AuthSubmitButton
+        loading={false}
+        loadingLabel=""
+        onClick={() => {
+          showToast({ title: "Welcome!", description: "Your doctor dashboard is ready." });
+          router.push("/doctor");
+          router.refresh();
+        }}
+      >
+        Go to dashboard
       </AuthSubmitButton>
     </AuthLayout>
   );

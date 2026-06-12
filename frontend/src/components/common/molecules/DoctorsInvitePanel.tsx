@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PendingInviteRow, notifyInviteResult } from "@/components/common/molecules/PendingInviteRow";
 import { showToast } from "@/components/ui/toast";
 
 export function DoctorsInvitePanel() {
@@ -39,12 +40,9 @@ export function DoctorsInvitePanel() {
     const trimmed = email.trim();
     if (!trimmed) return;
     try {
-      await createInvite({ email: trimmed, role: "doctor" }).unwrap();
+      const result = await createInvite({ email: trimmed, role: "doctor" }).unwrap();
       setEmail("");
-      showToast({
-        title: "Doctor invited",
-        description: `Invitation sent to ${trimmed}.`,
-      });
+      notifyInviteResult(trimmed, result);
     } catch (err) {
       showToast({
         title: "Could not send invite",
@@ -130,11 +128,14 @@ export function DoctorsInvitePanel() {
             <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Pending invites
             </p>
-            <ul className="space-y-1 text-sm">
+            <ul className="space-y-2">
               {pending.map((invite) => (
-                <li key={invite.id} className="text-muted-foreground">
-                  {invite.email} — awaiting acceptance
-                </li>
+                <PendingInviteRow
+                  key={invite.id}
+                  email={invite.email}
+                  token={invite.token}
+                  roleLabel="Doctor"
+                />
               ))}
             </ul>
           </div>

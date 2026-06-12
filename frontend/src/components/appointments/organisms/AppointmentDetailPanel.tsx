@@ -1,8 +1,10 @@
 "use client";
 
+import { useMemo } from "react";
 import { CheckCircle2, Printer, XCircle } from "lucide-react";
 
 import { AppointmentStatusTag } from "@/components/appointments/atoms/AppointmentStatusTag";
+import { useListTriageSessionsQuery } from "@/components/common/store/staffApi";
 import { Button } from "@/components/ui/button";
 import {
   useCancelAppointmentMutation,
@@ -18,6 +20,14 @@ interface AppointmentDetailPanelProps {
 export function AppointmentDetailPanel({ appointment, onClose }: AppointmentDetailPanelProps) {
   const [cancelAppointment, { isLoading: cancelling }] = useCancelAppointmentMutation();
   const [updateStatus, { isLoading: updating }] = useUpdateAppointmentStatusMutation();
+  const { data: triageData } = useListTriageSessionsQuery(undefined, {
+    skip: !appointment?.session_id,
+  });
+
+  const triageSession = useMemo(
+    () => triageData?.sessions.find((session) => session.id === appointment?.session_id) ?? null,
+    [appointment?.session_id, triageData?.sessions],
+  );
 
   if (!appointment) {
     return (
@@ -52,6 +62,10 @@ export function AppointmentDetailPanel({ appointment, onClose }: AppointmentDeta
           <dt className="text-muted-foreground">Treatment</dt>
           <dd>{appointment.treatment_type ?? "—"}</dd>
         </div>
+        <div className="flex justify-between gap-4 border-b border-border/50 pb-2">
+          <dt className="text-muted-foreground">Reason for visit</dt>
+          <dd className="text-right">{triageSession?.chief_complaint ?? appointment.treatment_type ?? "—"}</dd>
+        </div>
         <div className="flex justify-between gap-4">
           <dt className="text-muted-foreground">Confirmation</dt>
           <dd className="font-mono">{appointment.confirmation_code}</dd>
@@ -63,6 +77,23 @@ export function AppointmentDetailPanel({ appointment, onClose }: AppointmentDeta
           </div>
         ) : null}
       </dl>
+      {triageSession?.ai_summary ? (
+        <div className="mt-4 rounded-xl border border-border/60 bg-muted/30 p-4 text-sm">
+          <p className="font-medium">AI triage summary</p>
+          <p className="mt-2 whitespace-pre-wrap leading-relaxed text-muted-foreground">
+            {triageSession.ai_summary}
+          </p>
+          {triageSession.triage_status ? (
+            <p className="mt-2 text-xs uppercase tracking-wide text-muted-foreground">
+              Urgency: {triageSession.triage_status.replace(/_/g, " ")}
+            </p>
+          ) : null}
+        </div>
+      ) : appointment.session_id ? (
+        <div className="mt-4 rounded-xl border border-dashed border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
+          AI triage summary will appear here after the patient completes the booking chat.
+        </div>
+      ) : null}
       <div className="mt-6 flex flex-wrap gap-2 print:hidden">
         {appointment.status === "confirmed" ? (
           <>

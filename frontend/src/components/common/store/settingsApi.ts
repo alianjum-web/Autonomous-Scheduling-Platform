@@ -1,4 +1,4 @@
-import { fetchUserProfile } from "@/lib/supabase/onboarding";
+import { fetchUserProfile } from "@/lib/supabase/profile";
 
 import { baseApi } from "./baseApi";
 import type {
@@ -18,10 +18,15 @@ function resolveTenantEmbed(
   return Array.isArray(tenants) ? (tenants[0] ?? null) : tenants;
 }
 
+interface WorkspaceApiResponse {
+  name: string;
+  slug: string;
+}
+
 export const settingsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getUserProfile: builder.query<UserProfileSummary, void>({
-      queryFn: async () => {
+      async queryFn(_arg, _api, _extraOptions, baseQuery) {
         const data = await fetchUserProfile();
         if (!data) {
           return {
@@ -36,10 +41,23 @@ export const settingsApi = baseApi.injectEndpoints({
         }
 
         const tenant = resolveTenantEmbed(data.profile?.tenants);
+        let clinicName = tenant?.name ?? null;
+        let workspaceSlug = tenant?.slug ?? null;
+
+        // Supabase RLS hides the tenants embed until tenant_id is in the JWT — use the API.
+        if (data.profile?.tenant_id && (!clinicName || !workspaceSlug)) {
+          const workspace = await baseQuery("/v1/settings/workspace");
+          if (workspace.data) {
+            const ws = workspace.data as WorkspaceApiResponse;
+            clinicName = clinicName ?? ws.name ?? null;
+            workspaceSlug = workspaceSlug ?? ws.slug ?? null;
+          }
+        }
+
         return {
           data: {
-            clinicName: tenant?.name ?? null,
-            workspaceSlug: tenant?.slug ?? null,
+            clinicName,
+            workspaceSlug,
             email: data.user.email ?? null,
             fullName: data.profile?.full_name ?? null,
             role: data.profile?.role ?? null,

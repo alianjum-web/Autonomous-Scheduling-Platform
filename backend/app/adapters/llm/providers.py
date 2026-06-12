@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import time
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 
 import httpx
 from openai import AsyncOpenAI
@@ -55,8 +55,10 @@ class BaseLLMProvider(ABC):
         *,
         max_tokens: int,
         temperature: float,
-    ) -> AsyncIterator[str]:
-        ...
+    ) -> AsyncGenerator[str, None]:
+        if False:
+            yield ""
+        raise NotImplementedError
 
     @abstractmethod
     async def embed(self, texts: list[str]) -> list[list[float]]:
@@ -147,7 +149,7 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         *,
         max_tokens: int,
         temperature: float,
-    ) -> AsyncIterator[str]:
+    ) -> AsyncGenerator[str, None]:
         client = self._client_instance()
         stream = await client.chat.completions.create(
             model=self.chat_model(),
@@ -296,7 +298,7 @@ class GeminiProvider(BaseLLMProvider):
         *,
         max_tokens: int,
         temperature: float,
-    ) -> AsyncIterator[str]:
+    ) -> AsyncGenerator[str, None]:
         system_instruction, contents = self._to_gemini_contents(messages)
         payload: dict = {
             "contents": contents,

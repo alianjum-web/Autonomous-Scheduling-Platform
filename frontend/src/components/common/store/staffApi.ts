@@ -8,6 +8,7 @@ export interface StaffInvite {
   expires_at: string;
   accepted_at: string | null;
   created_at: string;
+  email_sent?: boolean;
 }
 
 export interface StaffInvitePreview {
@@ -28,6 +29,41 @@ export interface DoctorProvider {
   slot_duration_minutes: number;
   role?: string | null;
   email?: string | null;
+}
+
+export interface OwnerDashboardStats {
+  todays_appointments: number;
+  upcoming_appointments: number;
+  pending_requests: number;
+  active_doctors: number;
+  triage_sessions_today: number;
+  triage_sessions_total: number;
+  recent_patients: {
+    id: string;
+    name: string;
+    phone: string | null;
+    slot_start: string | null;
+    confirmation_code: string | null;
+  }[];
+}
+
+export interface DoctorDashboardStats {
+  appointments_today: number;
+  pending_reviews: number;
+  upcoming_patients: { name: string; phone: string | null; slot_start: string | null }[];
+  recent_intake_forms: number;
+}
+
+export interface TriageSessionSummary {
+  id: string;
+  status: string;
+  triage_status: string | null;
+  patient_name: string | null;
+  chief_complaint: string | null;
+  ai_summary: string | null;
+  source: string | null;
+  created_at: string;
+  intake_complete: boolean;
 }
 
 export const staffApi = baseApi.injectEndpoints({
@@ -81,6 +117,21 @@ export const staffApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Doctors"],
     }),
+    getOwnerDashboard: builder.query<OwnerDashboardStats, void>({
+      query: () => "/v1/staff/dashboard/owner",
+    }),
+    getDoctorDashboard: builder.query<DoctorDashboardStats, void>({
+      query: () => "/v1/staff/dashboard/doctor",
+    }),
+    listTriageSessions: builder.query<
+      { sessions: TriageSessionSummary[] },
+      { intakeOnly?: boolean } | void
+    >({
+      query: (args) => {
+        const intakeOnly = args?.intakeOnly ?? false;
+        return `/v1/staff/triage/sessions?intake_only=${intakeOnly ? "true" : "false"}`;
+      },
+    }),
   }),
 });
 
@@ -92,4 +143,7 @@ export const {
   useRemoveDoctorMutation,
   useGetMyProviderQuery,
   useUpdateMyAvailabilityMutation,
+  useGetOwnerDashboardQuery,
+  useGetDoctorDashboardQuery,
+  useListTriageSessionsQuery,
 } = staffApi;

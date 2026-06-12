@@ -11,8 +11,11 @@ import { AuthLayout } from "@/components/auth/layout/AuthLayout";
 import { AuthEmailField } from "@/components/auth/molecules/AuthEmailField";
 import { AuthPasswordField } from "@/components/auth/molecules/AuthPasswordField";
 import { useLocalForm } from "@/components/common/hooks/useLocalForm";
+import { useAppDispatch } from "@/components/common/store/hooks";
 import { Form } from "@/components/ui/form";
+import { postAuthPath } from "@/lib/auth/postAuthPath";
 import { createClient } from "@/lib/supabase/client";
+import { syncAuthSession } from "@/components/auth/session/syncAuthSession";
 
 interface SignInFormValues {
   email: string;
@@ -26,7 +29,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 export function SignInScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("next") ?? "/chat";
+  const explicitNext = searchParams.get("next");
   const queryError = searchParams.get("error");
   const queryMessage = searchParams.get("message");
   const { submitError, setSubmitError, successMessage, loading, setLoading, clearMessages } =
@@ -40,8 +43,9 @@ export function SignInScreen() {
       ? "Password updated successfully. You can sign in now."
       : null;
 
-  const form = useLocalForm<SignInFormValues>({ email: "muhammad.aliabbasanjum@gmail.com", password: "12345678" });
+  const form = useLocalForm<SignInFormValues>({ email: "", password: "" });
   const supabase = createClient();
+  const dispatch = useAppDispatch();
 
   const onSubmit = form.handleSubmit(async ({ email, password }) => {
     clearMessages();
@@ -61,15 +65,26 @@ export function SignInScreen() {
       return;
     }
 
-    await supabase.auth.getSession();
-    router.push(redirectTo);
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const profileData = await syncAuthSession(dispatch, session);
+    const destination = postAuthPath(
+      {
+        role: profileData?.profile?.role,
+        tenant_id: profileData?.profile?.tenant_id,
+        userId: profileData?.user?.id,
+      },
+      explicitNext,
+    );
+    router.push(destination);
     router.refresh();
   });
 
   return (
     <AuthLayout
-      title="Welcome back"
-      subtitle="Sign in to access patient intake, staff dashboards, and clinic tools."
+      title="Staff sign in"
+      subtitle="Clinic owners, staff, and invited doctors. Patients book without an account."
     >
       <Form {...form}>
         <form onSubmit={onSubmit} className="space-y-5">
@@ -99,9 +114,14 @@ export function SignInScreen() {
       </Form>
 
       <p className="text-center text-sm text-muted-foreground">
-        Don&apos;t have an account?{" "}
+        Clinic owner?{" "}
         <Link href="/sign-up" className="font-medium text-primary hover:underline">
-          Create one
+          Start your clinic
+        </Link>
+        {" · "}
+        Invited doctor or staff?{" "}
+        <Link href="/accept-invite" className="font-medium text-primary hover:underline">
+          Accept invite
         </Link>
       </p>
     </AuthLayout>

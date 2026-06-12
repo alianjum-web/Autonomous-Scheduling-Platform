@@ -4,8 +4,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
+import { useAppDispatch } from "@/components/common/store/hooks";
 import { usePreviewStaffInviteQuery } from "@/components/common/store/staffApi";
+import { postAuthPath } from "@/lib/auth/postAuthPath";
+import { createClient } from "@/lib/supabase/client";
 import { acceptStaffInvite } from "@/lib/supabase/staffInvite";
+import { syncAuthSession } from "@/components/auth/session/syncAuthSession";
 
 const DOCTOR_ONBOARDING_KEY = "symptra_doctor_onboarding_done";
 
@@ -20,7 +24,8 @@ export function markDoctorOnboardingComplete(userId: string) {
 
 export function useAcceptInvite(token: string) {
   const router = useRouter();
-  const { session, loading: authLoading, clinicRole } = useAuthSession();
+  const dispatch = useAppDispatch();
+  const { session, loading: authLoading } = useAuthSession();
   const { data: preview, isLoading: previewLoading, error } = usePreviewStaffInviteQuery(token, {
     skip: !token,
   });
@@ -41,8 +46,20 @@ export function useAcceptInvite(token: string) {
     setAccepting(true);
     try {
       await acceptStaffInvite(token);
-      const isDoctor = preview?.role === "doctor" || clinicRole === "doctor";
-      router.push(isDoctor ? "/doctor/onboarding" : "/front-desk");
+      const {
+        data: { session: nextSession },
+      } = await createClient().auth.getSession();
+      const profileData = await syncAuthSession(dispatch, nextSession);
+      const isDoctorInvite = preview?.role === "doctor" || profileData?.profile?.role === "doctor";
+      const destination = postAuthPath(
+        {
+          role: isDoctorInvite ? "doctor" : profileData?.profile?.role,
+          tenant_id: profileData?.profile?.tenant_id,
+          userId: profileData?.user?.id,
+        },
+        isDoctorInvite ? "/doctor/onboarding" : null,
+      );
+      router.push(destination);
       router.refresh();
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Could not accept invite.");

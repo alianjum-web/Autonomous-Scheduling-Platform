@@ -3,6 +3,7 @@
 import {
   selectAuthLoading,
   selectClinicRole,
+  selectIsClinicManager,
   selectIsDoctor,
   selectIsOwner,
   selectIsStaff,
@@ -14,6 +15,7 @@ export interface UseRoleGuardReturn {
   loading: boolean;
   clinicRole: ClinicRole | null;
   isOwner: boolean;
+  isClinicManager: boolean;
   isDoctor: boolean;
   isStaff: boolean;
   /** @deprecated Use isStaff */
@@ -24,8 +26,9 @@ export function useRoleGuard(): UseRoleGuardReturn {
   const loading = useAppSelector(selectAuthLoading);
   const clinicRole = useAppSelector(selectClinicRole);
   const isOwner = useAppSelector(selectIsOwner);
+  const isClinicManager = useAppSelector(selectIsClinicManager);
   const isDoctor = useAppSelector(selectIsDoctor);
   const isStaff = useAppSelector(selectIsStaff);
 
-  return { loading, clinicRole, isOwner, isDoctor, isStaff, isAdmin: isStaff };
+  return { loading, clinicRole, isOwner, isClinicManager, isDoctor, isStaff, isAdmin: isStaff };
 }

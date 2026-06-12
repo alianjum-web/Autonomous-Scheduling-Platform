@@ -12,6 +12,25 @@ def _settings_env_file() -> str | None:
     return str(path) if path.is_file() else None
 
 
+_LOCAL_DEV_ORIGINS = ("http://localhost:3000", "http://127.0.0.1:3000")
+
+
+def _normalize_origin(value: str) -> str:
+    return value.strip().rstrip("/")
+
+
+def _dedupe_origins(origins: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for origin in origins:
+        normalized = _normalize_origin(origin)
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        out.append(normalized)
+    return out
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=_settings_env_file(),
@@ -23,13 +42,34 @@ class Settings(BaseSettings):
     app_name: str = "Autonomous Scheduling Platform"
     debug: bool = False
 
-    # CORS — restrict to Next.js origin only (no trailing slash; browsers omit it on Origin header)
+    # Primary Next.js URL (invite links, booking URLs). Production: your Vercel URL.
     frontend_origin: str = "http://localhost:3000"
+    # Optional comma-separated extra browser origins (e.g. Vercel preview deployments).
+    cors_extra_origins: str = ""
 
     @field_validator("frontend_origin")
     @classmethod
     def _normalize_frontend_origin(cls, value: str) -> str:
-        return value.strip().rstrip("/")
+        return _normalize_origin(value)
+
+    @property
+    def cors_allow_origins(self) -> list[str]:
+        """Explicit CORS origins — production URL + local dev + any extras."""
+        extras = [
+            _normalize_origin(part)
+            for part in self.cors_extra_origins.split(",")
+            if part.strip()
+        ]
+        return _dedupe_origins([self.frontend_origin, *extras, *_LOCAL_DEV_ORIGINS])
+
+    @property
+    def cors_allow_origin_regex(self) -> str | None:
+        """LAN dev URLs (Next.js network mode) — development only."""
+        if self.environment != "development":
+            return None
+        return (
+            r"https?://(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3})(:\d+)?"
+        )
 
     # Supabase — loaded from env / .env (defaults satisfy static analysis; min_length enforces presence)
     supabase_url: str = Field(default="", min_length=1)

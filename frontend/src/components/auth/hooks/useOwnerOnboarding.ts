@@ -6,12 +6,13 @@ import { useEffect, useState } from "react";
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
 import { useLocalForm } from "@/components/common/hooks/useLocalForm";
 import { useCreateStaffInviteMutation } from "@/components/common/store/staffApi";
+import { useUpdateBookingPageMutation } from "@/components/patient-triage/store/bookingApi";
+import { clinicBookingUrl } from "@/lib/nav/roleNav";
 import {
   createClinic,
   normalizeClinicSlug,
   slugifyClinicName,
 } from "@/lib/supabase/onboarding";
-import { createClient } from "@/lib/supabase/client";
 
 export type OwnerOnboardingStep =
   | "welcome"
@@ -47,6 +48,7 @@ export function useOwnerOnboarding() {
   const [submitting, setSubmitting] = useState(false);
   const [tenantSlug, setTenantSlug] = useState<string | null>(null);
   const [createStaffInvite] = useCreateStaffInviteMutation();
+  const [updateBookingPage] = useUpdateBookingPageMutation();
 
   const form = useLocalForm<OwnerClinicFormValues>({
     clinicName: "",
@@ -60,9 +62,8 @@ export function useOwnerOnboarding() {
 
   useEffect(() => {
     const slug = searchParams.get("slug");
-    if (searchParams.get("mode") === "join" || slug) {
-      const rawSlug = slug ?? "";
-      router.replace(`/book/${encodeURIComponent(normalizeClinicSlug(rawSlug) || rawSlug)}`);
+    if (slug) {
+      router.replace(clinicBookingUrl(normalizeClinicSlug(slug) || slug));
     }
   }, [router, searchParams]);
 
@@ -73,7 +74,7 @@ export function useOwnerOnboarding() {
   }, [loading, session, router]);
 
   useEffect(() => {
-    if (tenantId && clinicRole === "admin") {
+    if (tenantId && (clinicRole === "admin" || clinicRole === "clinic_admin")) {
       router.replace("/front-desk");
     }
     if (tenantId && clinicRole === "doctor") {
@@ -94,7 +95,6 @@ export function useOwnerOnboarding() {
       clinicSlug: values.clinicSlug,
     });
     setTenantSlug(values.clinicSlug);
-    await createClient().auth.refreshSession();
     return id;
   };
 
@@ -146,7 +146,15 @@ export function useOwnerOnboarding() {
     }
 
     if (step === "finish") {
-      router.push("/front-desk");
+      setSubmitting(true);
+      try {
+        await updateBookingPage({ enabled: true }).unwrap();
+      } catch {
+        // Booking page can be published later from Settings.
+      } finally {
+        setSubmitting(false);
+      }
+      router.push("/settings");
       router.refresh();
       return;
     }
@@ -182,3 +190,5 @@ export function useOwnerOnboarding() {
     setStep,
   };
 }
+
+export type OwnerOnboardingWizardProps = ReturnType<typeof useOwnerOnboarding>;

@@ -14,6 +14,7 @@ class StaffInviteResponse(BaseModel):
     expires_at: str
     accepted_at: str | None
     created_at: str
+    email_sent: bool = False
 
 
 class StaffInviteListResponse(BaseModel):

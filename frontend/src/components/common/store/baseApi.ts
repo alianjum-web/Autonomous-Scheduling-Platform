@@ -1,7 +1,11 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from "@reduxjs/toolkit/query";
 
+import { selectAccessToken } from "@/components/auth/store/authSelectors";
+import { setSession } from "@/components/auth/store/authSlice";
+import type { RootState } from "@/components/common/store";
 import { createClient } from "@/lib/supabase/client";
+import { refreshAuthSessionOnce } from "@/lib/supabase/sessionRefresh";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -10,10 +14,8 @@ export type ApiBaseQuery = BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
 
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: API_BASE,
-  prepareHeaders: async (headers) => {
-    const supabase = createClient();
-    const { data } = await supabase.auth.getSession();
-    const token = data.session?.access_token;
+  prepareHeaders: (headers, { getState }) => {
+    const token = selectAccessToken(getState() as RootState);
     if (token) {
       headers.set("Authorization", `Bearer ${token}`);
     }
@@ -24,10 +26,13 @@ const rawBaseQuery = fetchBaseQuery({
 const baseQueryWithReauth: ApiBaseQuery = async (args, api, extraOptions) => {
   let result = await rawBaseQuery(args, api, extraOptions);
 
-  if (result.error?.status === 403) {
+  // Refresh only on 401 — 403 is a role/permission issue, not an expired token.
+  // Refreshing on 403 caused session churn for clinic_admin hitting owner-only APIs.
+  if (result.error?.status === 401) {
     const supabase = createClient();
-    const { data } = await supabase.auth.refreshSession();
-    if (data.session) {
+    const session = await refreshAuthSessionOnce(supabase);
+    if (session) {
+      api.dispatch(setSession(session));
       result = await rawBaseQuery(args, api, extraOptions);
     }
   }

@@ -1,22 +1,19 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { CalendarDays, Clock, Users, Zap } from "lucide-react";
 
-import { AppointmentCard } from "@/components/appointments/molecules/AppointmentCard";
 import { AppointmentDetailPanel } from "@/components/appointments/organisms/AppointmentDetailPanel";
 import { DailyCalendarGrid } from "@/components/appointments/organisms/DailyCalendarGrid";
+import { UpcomingAppointmentsList } from "@/components/appointments/molecules/UpcomingAppointmentsList";
 import { useAppointmentSync } from "@/components/appointments/hooks/useAppointmentSync";
 import { useGetAppointmentsQuery } from "@/components/appointments/store/appointmentsApi";
 import {
-  selectAppointments,
-  selectSelectedAppointment,
   selectSelectedAppointmentId,
   selectSelectedDate,
   selectViewMode,
 } from "@/components/appointments/store/appointmentsSelectors";
 import {
-  setAppointments,
   setSelectedAppointment,
   setSelectedDate,
   setViewMode,
@@ -25,12 +22,21 @@ import { MiniBarChart } from "@/components/common/atoms/MiniBarChart";
 import { StatCard } from "@/components/common/atoms/StatCard";
 import { useRoleGuard } from "@/components/common/hooks/useRoleGuard";
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
+import { useGetMyProviderQuery } from "@/components/common/store/staffApi";
 import { LoadingScreen } from "@/components/common/molecules/LoadingScreen";
 import { PageShell } from "@/components/common/layout/PageShell";
 import { AccessGate } from "@/components/common/molecules/AccessGate";
 import { PageHeader } from "@/components/common/molecules/PageHeader";
 import { useReduxForm } from "@/components/common/hooks/useReduxForm";
 import { useAppDispatch, useAppSelector } from "@/components/common/store/hooks";
+import {
+  appointmentsInWeek,
+  appointmentsOnDate,
+  nextAppointmentDate,
+  todayDateKey,
+  upcomingAppointments,
+} from "@/lib/scheduling/appointmentTime";
+import { appointmentMatchesProvider } from "@/lib/scheduling/providerMatching";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -41,31 +47,58 @@ interface DateFilterForm {
 
 export function AppointmentsDashboard() {
   const dispatch = useAppDispatch();
-  const { isStaff, loading: authLoading } = useRoleGuard();
+  const { isStaff, isDoctor, loading: authLoading } = useRoleGuard();
   const { tenantId, session } = useAuthSession();
+  const { data: provider } = useGetMyProviderQuery(undefined, { skip: !isDoctor });
   useAppointmentSync(tenantId);
 
   const selectedDate = useAppSelector(selectSelectedDate);
   const viewMode = useAppSelector(selectViewMode);
-  const appointments = useAppSelector(selectAppointments);
   const selectedAppointmentId = useAppSelector(selectSelectedAppointmentId);
-  const selected = useAppSelector(selectSelectedAppointment);
+  const initializedDate = useRef(false);
 
   const formValues = useMemo(() => ({ selectedDate }), [selectedDate]);
   const form = useReduxForm<DateFilterForm>(formValues);
 
-  const { data, refetch } = useGetAppointmentsQuery(selectedDate, { skip: !isStaff });
+  const { data, refetch, isLoading } = useGetAppointmentsQuery(undefined, { skip: !isStaff });
+  const allAppointments = useMemo(() => {
+    const rows = data?.appointments ?? [];
+    if (!isDoctor) return rows;
+    return rows.filter((row) => appointmentMatchesProvider(row, provider));
+  }, [data?.appointments, isDoctor, provider]);
+  const today = todayDateKey();
+
+  const dayAppointments = useMemo(
+    () => appointmentsOnDate(allAppointments, selectedDate),
+    [allAppointments, selectedDate],
+  );
+  const weekAppointments = useMemo(
+    () => appointmentsInWeek(allAppointments, selectedDate),
+    [allAppointments, selectedDate],
+  );
+  const upcoming = useMemo(() => upcomingAppointments(allAppointments, today), [allAppointments, today]);
+  const selected = useMemo(
+    () =>
+      selectedAppointmentId
+        ? (allAppointments.find((a) => a.id === selectedAppointmentId) ?? null)
+        : null,
+    [allAppointments, selectedAppointmentId],
+  );
 
   useEffect(() => {
-    if (data?.appointments) dispatch(setAppointments(data.appointments));
-  }, [data, dispatch]);
+    if (!allAppointments.length || initializedDate.current) return;
+    initializedDate.current = true;
+    if (appointmentsOnDate(allAppointments, selectedDate).length > 0) return;
+    const next = nextAppointmentDate(allAppointments, today);
+    if (next) dispatch(setSelectedDate(next));
+  }, [allAppointments, dispatch, selectedDate, today]);
 
   if (authLoading) return <LoadingScreen message="Checking permissions…" />;
   if (!session) {
     return (
       <AccessGate
         title="Sign in to view appointments"
-        description="The appointments dashboard requires an authenticated staff session with clinic admin privileges."
+        description="Appointments require a signed-in clinic staff or doctor account."
         icon={<CalendarDays className="size-8" />}
         imageKey="appointments"
         requireAdmin
@@ -75,8 +108,8 @@ export function AppointmentsDashboard() {
   if (!isStaff) {
     return (
       <AccessGate
-        title="Admin access required"
-        description="Your account is signed in but lacks the clinic_admin role. Contact your administrator to update Supabase app metadata."
+        title="Staff access required"
+        description="Your account is signed in but lacks staff permissions. Contact your clinic owner."
         icon={<CalendarDays className="size-8" />}
         imageKey="appointments"
         requireAdmin
@@ -89,16 +122,22 @@ export function AppointmentsDashboard() {
     <PageShell maxWidth="full" className="gap-6 px-6 py-6">
       <div className="mb-2">
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-          Welcome back! <span className="inline-block animate-pulse">👋</span>
+          {isDoctor ? "Your appointments" : "Appointments"}
+          {!isDoctor ? <span className="inline-block animate-pulse"> 👋</span> : null}
         </h1>
-        <p className="text-sm text-muted-foreground">Today&apos;s appointments and schedule overview</p>
+        <p className="text-sm text-muted-foreground">
+          {isDoctor
+            ? `${upcoming.length} upcoming booking${upcoming.length === 1 ? "" : "s"} assigned to you`
+            : `${upcoming.length} upcoming appointment${upcoming.length === 1 ? "" : "s"} at your clinic`}
+        </p>
       </div>
 
+      {!isDoctor ? (
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Total Appointments"
-          value={appointments.length}
-          trend="+12% this month"
+          label="Upcoming total"
+          value={upcoming.length}
+          trend={`${dayAppointments.length} on ${selectedDate}`}
           trendUp
           icon={CalendarDays}
         >
@@ -108,21 +147,21 @@ export function AppointmentsDashboard() {
               { value: 7 },
               { value: 5 },
               { value: 9 },
-              { value: appointments.length || 6 },
+              { value: upcoming.length || 1 },
             ]}
           />
         </StatCard>
         <StatCard
           label="Confirmed"
-          value={appointments.filter((a) => a.status === "confirmed").length}
-          trend="On track"
+          value={upcoming.filter((a) => a.status === "confirmed").length}
+          trend="Active bookings"
           icon={Users}
           iconClassName="bg-success/10 text-success"
         />
         <StatCard
           label="Pending"
-          value={appointments.filter((a) => a.status === "pending").length}
-          trend="-3% this week"
+          value={upcoming.filter((a) => a.status === "pending").length}
+          trend="Awaiting confirmation"
           trendUp={false}
           icon={Clock}
           iconClassName="bg-warning/15 text-warning"
@@ -136,11 +175,40 @@ export function AppointmentsDashboard() {
           iconClassName="bg-info/10 text-info"
         />
       </div>
+      ) : (
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatCard
+          label="Today"
+          value={dayAppointments.length}
+          trend={selectedDate}
+          icon={CalendarDays}
+        />
+        <StatCard
+          label="Confirmed"
+          value={upcoming.filter((a) => a.status === "confirmed").length}
+          trend="Active bookings"
+          icon={Users}
+          iconClassName="bg-success/10 text-success"
+        />
+        <StatCard
+          label="Pending"
+          value={upcoming.filter((a) => a.status === "pending").length}
+          trend="Awaiting confirmation"
+          trendUp={false}
+          icon={Clock}
+          iconClassName="bg-warning/15 text-warning"
+        />
+      </div>
+      )}
 
       <PageHeader
-        eyebrow="Schedule"
-        title="Appointments Dashboard"
-        description="Day and week views with real-time sync and distributed slot locking."
+        eyebrow={isDoctor ? "Doctor" : "Schedule"}
+        title={isDoctor ? "Appointment calendar" : "Appointments Dashboard"}
+        description={
+          isDoctor
+            ? "Select an appointment to read the AI triage summary before the visit."
+            : "Calendar uses your local timezone. Change the date to view other days."
+        }
         imageKey="appointments"
         actions={
           <>
@@ -188,25 +256,42 @@ export function AppointmentsDashboard() {
       />
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+        <div className="space-y-6 lg:col-span-2">
           {viewMode === "day" ? (
-            <DailyCalendarGrid
-              appointments={appointments}
-              date={selectedDate}
-              onSelect={(id) => dispatch(setSelectedAppointment(id))}
-            />
+            <>
+              <DailyCalendarGrid
+                appointments={allAppointments}
+                date={selectedDate}
+                onSelect={(id) => dispatch(setSelectedAppointment(id))}
+              />
+              {dayAppointments.length === 0 && !isLoading ? (
+                <p className="text-sm text-muted-foreground">
+                  No appointments on this day.{" "}
+                  {upcoming.length > 0 ? "See all upcoming bookings below." : ""}
+                </p>
+              ) : null}
+            </>
           ) : (
-            <div className="space-y-3">
-              {appointments.map((a) => (
-                <AppointmentCard
-                  key={a.id}
-                  appointment={a}
-                  selected={a.id === selectedAppointmentId}
-                  onClick={() => dispatch(setSelectedAppointment(a.id))}
-                />
-              ))}
-            </div>
+            <UpcomingAppointmentsList
+              appointments={weekAppointments}
+              selectedId={selectedAppointmentId}
+              onSelect={(id) => dispatch(setSelectedAppointment(id))}
+              emptyMessage="No appointments this week."
+            />
           )}
+
+          <div>
+            <h2 className="mb-3 text-sm font-semibold">All upcoming bookings</h2>
+            <UpcomingAppointmentsList
+              appointments={upcoming}
+              selectedId={selectedAppointmentId}
+              onSelect={(id) => {
+                dispatch(setSelectedAppointment(id));
+                const appt = upcoming.find((a) => a.id === id);
+                if (appt) dispatch(setSelectedDate(appt.slot_start.slice(0, 10)));
+              }}
+            />
+          </div>
         </div>
         <AppointmentDetailPanel
           appointment={selected}

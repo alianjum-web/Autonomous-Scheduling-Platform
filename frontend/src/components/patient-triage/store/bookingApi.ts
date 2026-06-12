@@ -34,15 +34,32 @@ export const bookingApi = baseApi.injectEndpoints({
       invalidatesTags: ["Calendar", "Compliance"],
     }),
     getBookingPage: builder.query<
-      { enabled: boolean; welcome_message: string | null; public_url: string | null },
+      {
+        enabled: boolean;
+        welcome_message: string | null;
+        public_url: string | null;
+        clinic_hours_info: string | null;
+        clinic_services: string | null;
+      },
       void
     >({
       query: () => "/v1/schedule/booking-page",
       providesTags: ["Calendar"],
     }),
     updateBookingPage: builder.mutation<
-      { enabled: boolean; welcome_message: string | null; public_url: string | null },
-      { enabled: boolean; welcome_message?: string | null }
+      {
+        enabled: boolean;
+        welcome_message: string | null;
+        public_url: string | null;
+        clinic_hours_info: string | null;
+        clinic_services: string | null;
+      },
+      {
+        enabled: boolean;
+        welcome_message?: string | null;
+        clinic_hours_info?: string | null;
+        clinic_services?: string | null;
+      }
     >({
       query: (body) => ({
         url: "/v1/schedule/booking-page",

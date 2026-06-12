@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@source "../**/*.{ts,tsx}";
+
 /*
  * Symptra / Panacea inspired clinical dashboard theme
  * Light: royal blue primary, soft cards, generous radius
@@ -134,14 +136,18 @@
   --color-cta-foreground: hsl(var(--cta-foreground));
   --color-sidebar: hsl(var(--sidebar));
   --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-active: hsl(var(--sidebar-active));
+  --color-sidebar-active-bg: hsl(var(--sidebar-active-bg));
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
-  --font-sans: var(--font-inter);
-  --font-mono: var(--font-geist-mono);
+  --color-ring-offset: hsl(var(--background));
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 4px);
   --radius-sm: calc(var(--radius) - 8px);
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
 }
 
 body {

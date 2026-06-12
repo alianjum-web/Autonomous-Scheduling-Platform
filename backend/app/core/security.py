@@ -12,6 +12,7 @@ security_scheme = HTTPBearer(auto_error=False)
 
 ADMIN_ROLES = frozenset({"admin", "clinic_admin", "doctor"})
 OWNER_ROLES = frozenset({"admin"})
+CLINIC_MANAGER_ROLES = frozenset({"admin", "clinic_admin"})
 STAFF_ROLES = frozenset({"admin", "clinic_admin", "doctor"})
 DOCTOR_ROLES = frozenset({"doctor"})
 
@@ -121,6 +122,16 @@ async def require_owner(payload: Annotated[dict, Depends(get_jwt_payload)]) -> d
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Clinic owner role required",
+        )
+    return payload
+
+
+async def require_clinic_manager(payload: Annotated[dict, Depends(get_jwt_payload)]) -> dict:
+    role = await _resolve_role(payload)
+    if role not in CLINIC_MANAGER_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Clinic manager role required",
         )
     return payload
 

@@ -19,11 +19,11 @@ const GUIDES: {
 }[] = [
   {
     icon: MessageSquare,
-    title: "Patient intake chat",
+    title: "Guest patient booking",
     description:
-      "Sign in, open Patient Chat, and start a session. Describe symptoms or scheduling needs — the AI uses your clinic knowledge base and live slot availability.",
-    href: "/chat",
-    cta: "Open chat",
+      "Patients visit /clinic/your-slug — no login. They complete AI triage, pick a slot, and confirm. Staff triage chat is under AI Triage for owners and front desk.",
+    href: "/settings",
+    cta: "Publish booking page",
     imageKey: "chat",
   },
   {
@@ -58,7 +58,7 @@ const GUIDES: {
 const FAQ = [
   {
     q: "Who can access staff dashboards?",
-    a: "Users with clinic_admin or admin role in Supabase app metadata. Set this during onboarding or via your Supabase dashboard.",
+    a: "Clinic owners (admin) sign up and create a workspace. Doctors and staff join via invite only. Patients never need an account — they book at /clinic/your-slug.",
   },
   {
     q: "Is patient data sent to the browser LLM?",

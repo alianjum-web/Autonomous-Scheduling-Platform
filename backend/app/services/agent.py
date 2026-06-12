@@ -8,7 +8,6 @@ import aiosqlite
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph import END, StateGraph
-from openai.types.chat import ChatCompletionMessageParam
 from typing_extensions import NotRequired, TypedDict
 
 from app.schemas.db import ChatMessage
@@ -25,6 +24,7 @@ from app.services.emergency_keywords import (
     load_keywords_from_db,
 )
 from app.services.rag import retrieve_context
+from app.services.clinic_knowledge_service import baseline_rag_chunks
 from app.services.booking_intent import (
     ISO_SLOT_RE,
     extract_patient_name,
@@ -145,7 +145,14 @@ async def intent_classifier(state: AgentState) -> AgentState:
         intent = "cancellation"
     elif any(w in msg_lower for w in ("human", "person", "staff", "coordinator", "speak to")):
         intent = "escalation"
-    elif any(w in msg_lower for w in ("?", "what", "how", "when", "cost", "price", "insurance")):
+    elif any(
+        w in msg_lower
+        for w in (
+            "?", "what", "how", "when", "where", "cost", "price", "insurance",
+            "service", "offer", "provide", "facility", "blood", "test", "lab",
+            "timing", "hour", "hours", "open", "close", "available",
+        )
+    ):
         intent = "faq"
     else:
         intent = "unknown"
@@ -154,13 +161,15 @@ async def intent_classifier(state: AgentState) -> AgentState:
 
 async def rag_retriever(state: AgentState) -> AgentState:
     category_filter = None
-    intent = state.get("intent", "unknown")
-    if intent == "faq":
-        category_filter = None
-    elif "price" in state.get("latest_user_message", "").lower():
+    msg_lower = state.get("latest_user_message", "").lower()
+    if "price" in msg_lower or "cost" in msg_lower:
         category_filter = "pricing"
-    elif "insurance" in state.get("latest_user_message", "").lower():
+    elif "insurance" in msg_lower:
         category_filter = "insurance"
+    elif any(w in msg_lower for w in ("treatment", "protocol", "procedure")):
+        category_filter = "treatment_protocol"
+
+    baseline = await baseline_rag_chunks(state["tenant_id"])
 
     try:
         docs = await retrieve_context(
@@ -172,6 +181,12 @@ async def rag_retriever(state: AgentState) -> AgentState:
     except Exception as exc:
         logger.warning("RAG retrieval failed", extra={"extra_data": {"error": str(exc)}})
         docs = []
+
+    if category_filter:
+        docs = baseline + [d for d in docs if d.get("category") == category_filter]
+    else:
+        docs = baseline + docs
+
     return {**state, "rag_context": docs}
 
 
@@ -188,8 +203,9 @@ async def response_generator(state: AgentState) -> AgentState:
     slots_text = "\n".join(state.get("available_slots", [])) or "No slots currently available."
 
     system = f"""You are a warm, professional patient intake assistant for a high-end medical clinic.
-Use ONLY the clinic information below to answer. Never invent medical advice.
-If unsure, say you will connect the patient with a team member.
+Answer clinic questions (hours, services, pricing, insurance) using ONLY the CLINIC KNOWLEDGE below.
+Never invent services, prices, or medical advice. If the knowledge does not mention something, say clearly
+that you do not have that information and offer to connect the patient with the front desk or to book a visit.
 
 CLINIC KNOWLEDGE:
 {rag_text}
@@ -199,15 +215,17 @@ AVAILABLE APPOINTMENT SLOTS:
 
 Rules:
 - Be concise, empathetic, and professional
+- For "what services" or "do you offer X" questions, quote relevant lines from CLINIC KNOWLEDGE
+- For clinic hours, state the hours from CLINIC KNOWLEDGE exactly
 - Never diagnose or prescribe
 - If asked for a specific slot, confirm it and ask for patient name and phone
 - If patient seems distressed, offer to connect with a human staff member
 - For out-of-scope medical advice, politely decline and offer to connect with clinical staff"""
 
-    messages = cast(
-        list[ChatCompletionMessageParam],
-        [{"role": "system", "content": system}] + state.get("messages", []),
-    )
+    messages: list[dict[str, str]] = [
+        {"role": "system", "content": system},
+        *state.get("messages", []),
+    ]
     tokens: list[str] = []
     queue = _get_stream_queue(state["session_id"])
 
@@ -348,6 +366,7 @@ def _fallback_response(state: AgentState) -> str:
     intent = state.get("intent", "unknown")
     slots = state.get("available_slots", [])
     rag = state.get("rag_context", [])
+    msg_lower = state.get("latest_user_message", "").lower()
 
     if intent == "booking_request" and slots:
         formatted = "\n".join(f"• {s}" for s in slots[:5])
@@ -355,17 +374,36 @@ def _fallback_response(state: AgentState) -> str:
             f"I found these available appointment times:\n{formatted}\n\n"
             "Which slot works best for you?"
         )
+
     if rag:
-        snippet = rag[0].get("content_payload", "")[:300]
-        return f"Based on our clinic information: {snippet}\n\nHow else can I help you today?"
+        combined = "\n".join(
+            str(d.get("content_payload") or "") for d in rag if d.get("content_payload")
+        )
+        if any(w in msg_lower for w in ("hour", "timing", "time", "open", "close", "when")):
+            for line in combined.splitlines():
+                if "hour" in line.lower() or "bookable" in line.lower():
+                    return f"{line.strip()}\n\nWould you like to book an appointment?"
+        if any(w in msg_lower for w in ("service", "offer", "provide", "blood", "test", "lab")):
+            for line in combined.splitlines():
+                if "service" in line.lower() or "doctor" in line.lower():
+                    return (
+                        f"{line.strip()}\n\n"
+                        "If you need a specific test or treatment, I can help you book a visit "
+                        "so our team can confirm availability."
+                    )
+        snippet = combined[:600].strip()
+        if snippet:
+            return f"Here is what I have from our clinic information:\n\n{snippet}\n\nHow else can I help you?"
+
     if intent == "unknown":
         return (
             "I'm not able to provide specific medical advice, but I can help with scheduling, "
             "clinic policies, and connecting you with our care team. What would you like help with?"
         )
     return (
-        "Thank you for reaching out. I'm here to help with scheduling and clinic questions. "
-        "Would you like to book an appointment or learn about our services?"
+        "I don't have detailed clinic information loaded yet. Your clinic owner can add hours and "
+        "services under Settings, or upload FAQ documents under Clinic Docs. "
+        "Would you like to book an appointment or speak with our team?"
     )
 
 
@@ -524,8 +562,14 @@ async def run_triage_agent(
             (history or []) + [{"role": "user", "content": message}],
         ),
         "latest_user_message": message,
-        "selected_slot": resolved_slot,
+        "intent": "unknown",
+        "rag_context": [],
         "available_slots": prev_slots,
+        "final_response": "",
+        "should_escalate": False,
+        "is_emergency": False,
+        "token_stream": [],
+        "selected_slot": resolved_slot,
         "force_slot_flow": action == "select_slot" and bool(selected_slot),
     }
     if action == "select_slot" and selected_slot:

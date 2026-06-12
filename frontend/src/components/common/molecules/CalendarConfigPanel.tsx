@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { CalendarDays } from "lucide-react";
 
 import {
@@ -12,30 +12,30 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { CalendarConfigUpdateRequest } from "@/types/schedule";
+import type { CalendarConfigResponse, CalendarConfigUpdateRequest } from "@/types/schedule";
+
+function configToForm(config: CalendarConfigResponse): CalendarConfigUpdateRequest {
+  return {
+    timezone: config.timezone,
+    calendar_provider: config.google_connected ? "google" : config.uses_mock_slots ? "mock" : "none",
+    google_calendar_id: config.google_calendar_id,
+    business_hours_start: config.business_hours_start,
+    business_hours_end: config.business_hours_end,
+    slot_duration_minutes: config.slot_duration_minutes,
+  };
+}
 
 export function CalendarConfigPanel() {
   const { data: config, isLoading } = useGetCalendarConfigQuery();
   const [updateConfig, { isLoading: saving }] = useUpdateCalendarConfigMutation();
-  const [form, setForm] = useState<CalendarConfigUpdateRequest | null>(null);
-
-  useEffect(() => {
-    if (config && !form) {
-      setForm({
-        timezone: config.timezone,
-        calendar_provider: config.google_connected ? "google" : config.uses_mock_slots ? "mock" : "none",
-        google_calendar_id: config.google_calendar_id,
-        business_hours_start: config.business_hours_start,
-        business_hours_end: config.business_hours_end,
-        slot_duration_minutes: config.slot_duration_minutes,
-      });
-    }
-  }, [config, form]);
+  const [draft, setDraft] = useState<CalendarConfigUpdateRequest | null>(null);
+  const form = draft ?? (config ? configToForm(config) : null);
 
   const handleSave = async () => {
     if (!form) return;
     try {
       await updateConfig(form).unwrap();
+      setDraft(null);
       showToast({
         title: "Calendar settings saved",
         description: form.calendar_provider === "google"
@@ -86,7 +86,7 @@ export function CalendarConfigPanel() {
                 <Input
                   id="timezone"
                   value={form.timezone}
-                  onChange={(e) => setForm({ ...form, timezone: e.target.value })}
+                  onChange={(e) => setDraft({ ...form, timezone: e.target.value })}
                   placeholder="America/New_York"
                 />
               </div>
@@ -96,7 +96,7 @@ export function CalendarConfigPanel() {
                   id="google_calendar_id"
                   value={form.google_calendar_id ?? ""}
                   onChange={(e) =>
-                    setForm({
+                    setDraft({
                       ...form,
                       google_calendar_id: e.target.value || null,
                       calendar_provider: e.target.value ? "google" : "mock",
@@ -114,7 +114,7 @@ export function CalendarConfigPanel() {
                   max={23}
                   value={form.business_hours_start}
                   onChange={(e) =>
-                    setForm({ ...form, business_hours_start: Number(e.target.value) })
+                    setDraft({ ...form, business_hours_start: Number(e.target.value) })
                   }
                 />
               </div>
@@ -127,7 +127,7 @@ export function CalendarConfigPanel() {
                   max={24}
                   value={form.business_hours_end}
                   onChange={(e) =>
-                    setForm({ ...form, business_hours_end: Number(e.target.value) })
+                    setDraft({ ...form, business_hours_end: Number(e.target.value) })
                   }
                 />
               </div>
@@ -141,7 +141,7 @@ export function CalendarConfigPanel() {
                   step={15}
                   value={form.slot_duration_minutes}
                   onChange={(e) =>
-                    setForm({ ...form, slot_duration_minutes: Number(e.target.value) })
+                    setDraft({ ...form, slot_duration_minutes: Number(e.target.value) })
                   }
                 />
               </div>

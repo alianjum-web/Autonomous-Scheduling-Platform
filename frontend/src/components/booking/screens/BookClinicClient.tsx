@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { clinicBookingUrl } from "@/lib/nav/roleNav";
+
 import { AuthErrorBanner } from "@/components/auth/atoms/AuthErrorBanner";
 import { AuthLayout } from "@/components/auth/layout/AuthLayout";
 import { useGuestVisitBootstrap } from "@/components/booking/hooks/useGuestVisitBootstrap";
@@ -25,7 +27,7 @@ function PublicVisitPanel({ slug }: { slug: string }) {
   const { clinic, loading, error } = usePublicClinic(slug);
   const existing = loadGuestVisit(slug);
   const { visit, loading: bootLoading, error: bootError, goToDetails } = useGuestVisitBootstrap(
-    clinic!,
+    slug,
     existing,
   );
 
@@ -63,9 +65,26 @@ function BookClinicContent({ slug, step, confirmationCode }: BookClinicClientPro
   if (loading) return <LoadingScreen message="Loading clinic…" />;
 
   if (error || !clinic) {
+    const apiMessage = error ?? "This booking page is not available.";
+    const isNetworkError =
+      apiMessage.includes("Failed to fetch") || apiMessage.includes("NetworkError");
     return (
       <AuthLayout title="Clinic not found" subtitle="This booking page is not available.">
-        <AuthErrorBanner message="Check the link from your clinic or try again later." />
+        <AuthErrorBanner
+          message={
+            isNetworkError
+              ? "Cannot reach the API. Start the backend (port 8000) and check NEXT_PUBLIC_API_URL in frontend/.env."
+              : apiMessage
+          }
+        />
+        <p className="mt-4 text-center text-xs text-muted-foreground">
+          Clinic owner?{" "}
+          <Link href="/sign-up" className="text-primary hover:underline">
+            Sign up
+          </Link>{" "}
+          to create your clinic and get a public URL like{" "}
+          <span className="font-mono">/clinic/your-clinic-slug</span>.
+        </p>
       </AuthLayout>
     );
   }
@@ -90,7 +109,7 @@ function BookClinicContent({ slug, step, confirmationCode }: BookClinicClientPro
         <p className="text-sm text-muted-foreground">
           No account required — you will receive details from the clinic.
         </p>
-        <Link href={`/book/${slug}`} className="text-sm text-primary hover:underline">
+        <Link href={clinicBookingUrl(slug)} className="text-sm text-primary hover:underline">
           Book another visit
         </Link>
       </div>

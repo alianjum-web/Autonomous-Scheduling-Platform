@@ -28,7 +28,13 @@ function resolveSupabaseConfig() {
   return { url: url!, key: key! };
 }
 
+let browserClient: ReturnType<typeof createBrowserClient<Database>> | undefined;
+
+/** Singleton browser client — avoids duplicate auth listeners and refresh races. */
 export function createClient() {
-  const { url, key } = resolveSupabaseConfig();
-  return createBrowserClient<Database>(url, key);
+  if (!browserClient) {
+    const { url, key } = resolveSupabaseConfig();
+    browserClient = createBrowserClient<Database>(url, key);
+  }
+  return browserClient;
 }

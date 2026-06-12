@@ -16,7 +16,7 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
     <div className="flex min-h-screen flex-col bg-background lg:flex-row">
       <div className="relative hidden w-full flex-col justify-between overflow-hidden p-10 text-primary-foreground lg:flex lg:w-[44%] xl:w-[42%]">
         <ClinicalImage asset="auth" variant="auth" fillParent className="opacity-20" priority />
-        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/90 to-info/80" />
+        <div className="absolute inset-0 bg-linear-to-br from-primary via-primary/90 to-info/80" />
         <div className="relative z-10">
           <Link href="/" className="inline-flex items-center gap-3 text-lg font-bold">
             <span className="flex size-10 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm">

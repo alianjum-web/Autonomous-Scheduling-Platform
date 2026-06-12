@@ -4,6 +4,7 @@ import { AuthErrorBanner } from "@/components/auth/atoms/AuthErrorBanner";
 import { AuthLayout } from "@/components/auth/layout/AuthLayout";
 import { AuthSubmitButton } from "@/components/auth/atoms/AuthSubmitButton";
 import type { StaffInvitePreview } from "@/components/common/store/staffApi";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface AcceptInviteFormProps {
   preview: StaffInvitePreview;
@@ -22,24 +23,41 @@ export function AcceptInviteForm({
 }: AcceptInviteFormProps) {
   const roleLabel =
     preview.role === "admin"
-      ? "clinic owner"
+      ? "Clinic owner"
       : preview.role === "doctor"
-        ? "doctor"
-        : "clinic staff";
+        ? "Doctor"
+        : "Clinic staff";
 
   return (
     <AuthLayout
-      title={`Join ${preview.clinic_name}`}
+      title="Join clinic"
       subtitle={
         preview.role === "doctor"
-          ? `You are invited as a doctor at ${preview.clinic_name}. Accept to finish setup.`
-          : `You are invited as ${roleLabel}. Sign in as ${preview.email} to continue.`
+          ? "Accept your invitation to set up your doctor account."
+          : `Accept your invitation to join ${preview.clinic_name}.`
       }
     >
+      <Card className="border-border/70 bg-muted/20">
+        <CardContent className="space-y-3 p-5 text-sm">
+          <div className="flex justify-between gap-4 border-b border-border/50 pb-2">
+            <span className="text-muted-foreground">Clinic</span>
+            <span className="font-medium">{preview.clinic_name}</span>
+          </div>
+          <div className="flex justify-between gap-4 border-b border-border/50 pb-2">
+            <span className="text-muted-foreground">Role</span>
+            <span className="font-medium">{roleLabel}</span>
+          </div>
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">Email</span>
+            <span className="font-medium">{preview.email}</span>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="space-y-4">
         {submitError ? <AuthErrorBanner message={submitError} /> : null}
         <AuthSubmitButton loading={accepting} loadingLabel="Joining clinic…" onClick={() => void onAccept()}>
-          Accept invitation
+          Accept &amp; continue
         </AuthSubmitButton>
         <p className="text-center text-xs text-muted-foreground">
           Wrong account?{" "}

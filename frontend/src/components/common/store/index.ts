@@ -5,7 +5,7 @@ import clinicDocsReducer from "@/components/clinic-docs/store/clinicDocsSlice";
 import bookingReducer from "@/components/patient-triage/store/bookingSlice";
 import triageReducer from "@/components/patient-triage/store/triageSlice";
 
-import authReducer from "@/components/auth/store/authSlice";
+import { authReducer } from "@/components/auth/store";
 import { baseApi } from "./baseApi";
 
 import "@/components/appointments/store/appointmentsApi";

@@ -42,7 +42,7 @@ export function PageHeader({
 
       {imageKey ? (
         <div className="relative hidden min-h-[180px] md:block">
-          <ClinicalImage asset={imageKey} variant="header" />
+          <ClinicalImage asset={imageKey} variant="header" priority />
           <div className="absolute inset-0 bg-linear-to-r from-card via-card/50 to-transparent" />
         </div>
       ) : null}

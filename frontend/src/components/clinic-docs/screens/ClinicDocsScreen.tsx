@@ -84,7 +84,7 @@ export function ClinicDocsScreen() {
       <PageHeader
         eyebrow="Knowledge base"
         title="Clinic Documents"
-        description="Upload treatment protocols, pricing guides, insurance policies, and FAQs for RAG-powered patient intake."
+        description="Upload treatment protocols, pricing guides, insurance policies, and FAQs. Choose category **FAQ** for hours, services, and common patient questions — the intake chat uses these documents to answer queries like “what are your timings?” or “do you do blood tests?”"
         imageKey="docs"
       />
 
@@ -108,7 +108,8 @@ export function ClinicDocsScreen() {
         ) : documents.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border py-12 text-center">
             <p className="text-sm text-muted-foreground">
-              No documents ingested yet. Upload your first clinic policy above.
+              No documents ingested yet. Upload an FAQ PDF with clinic hours and services, or add
+              quick facts under Settings → Public booking page → AI intake assistant knowledge.
             </p>
           </div>
         ) : (

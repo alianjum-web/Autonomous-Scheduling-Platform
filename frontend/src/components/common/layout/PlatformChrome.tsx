@@ -8,19 +8,21 @@ import { DashboardSidebar } from "@/components/common/layout/DashboardSidebar";
 import { DashboardTopbar } from "@/components/common/layout/DashboardTopbar";
 import { MarketingShell } from "@/components/common/layout/MarketingShell";
 import { useDoctorOnboardingGuard } from "@/components/common/hooks/useDoctorOnboardingGuard";
+import { useRoleHomeGuard } from "@/components/common/hooks/useRoleHomeGuard";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const MARKETING_ROUTES = new Set(["/", "/privacy", "/terms", "/hipaa-notice", "/help", "/status"]);
 
 function isMarketingRoute(pathname: string) {
-  return MARKETING_ROUTES.has(pathname) || pathname.startsWith("/book/");
+  return MARKETING_ROUTES.has(pathname) || pathname.startsWith("/clinic/");
 }
 
 export function PlatformChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [mobileNav, setMobileNav] = useState(false);
   useDoctorOnboardingGuard();
+  useRoleHomeGuard();
 
   if (isMarketingRoute(pathname)) {
     return <MarketingShell>{children}</MarketingShell>;

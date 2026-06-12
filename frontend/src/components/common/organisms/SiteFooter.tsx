@@ -1,6 +1,15 @@
+"use client";
+
 import Link from "next/link";
 
+import { useAuthSession } from "@/components/common/hooks/useAuthSession";
+import { selectDashboardHref } from "@/components/auth/store/authSelectors";
+import { useAppSelector } from "@/components/common/store/hooks";
+
 export function SiteFooter() {
+  const { session } = useAuthSession();
+  const dashboardHref = useAppSelector(selectDashboardHref);
+
   return (
     <footer className="border-t border-border/70 bg-card/60">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
@@ -17,7 +26,7 @@ export function SiteFooter() {
               <p className="font-semibold text-foreground">Product</p>
               <div className="flex flex-col gap-2.5 text-muted-foreground">
                 <Link href="/chat" className="transition-colors hover:text-foreground">
-                  Patient Chat
+                  AI Triage (staff)
                 </Link>
                 <Link href="/front-desk" className="transition-colors hover:text-foreground">
                   Front Desk
@@ -34,15 +43,25 @@ export function SiteFooter() {
             <div className="space-y-3">
               <p className="font-semibold text-foreground">Account</p>
               <div className="flex flex-col gap-2.5 text-muted-foreground">
-                <Link href="/sign-in" className="transition-colors hover:text-foreground">
-                  Sign in
-                </Link>
-                <Link href="/sign-up" className="transition-colors hover:text-foreground">
-                  Sign up
-                </Link>
-                <Link href="/settings" className="transition-colors hover:text-foreground">
-                  Settings
-                </Link>
+                {session ? (
+                  <>
+                    <Link href={dashboardHref} className="transition-colors hover:text-foreground">
+                      Dashboard
+                    </Link>
+                    <Link href="/settings" className="transition-colors hover:text-foreground">
+                      Settings
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/sign-in" className="transition-colors hover:text-foreground">
+                      Staff sign in
+                    </Link>
+                    <Link href="/sign-up" className="transition-colors hover:text-foreground">
+                      Start clinic trial
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
 
@@ -76,7 +95,8 @@ export function SiteFooter() {
         </div>
 
         <p className="mt-10 border-t border-border/70 pt-6 text-xs text-muted-foreground">
-          © {new Date().getFullYear()} Symptra Scheduling. All rights reserved.
+          © {new Date().getFullYear()} Symptra Scheduling. All rights reserved. Patients book at{" "}
+          <span className="font-mono">/clinic/your-clinic</span> — no account required.
         </p>
       </div>
     </footer>

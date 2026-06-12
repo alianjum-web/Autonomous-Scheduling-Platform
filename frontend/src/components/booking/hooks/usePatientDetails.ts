@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { useLocalForm } from "@/components/common/hooks/useLocalForm";
 import { clearGuestVisit, loadGuestVisit, type PatientIntake } from "@/lib/booking/guestVisit";
+import { clinicBookingUrl } from "@/lib/nav/roleNav";
 import type { PublicClinic } from "@/lib/booking/publicClinicApi";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -58,10 +59,21 @@ export function usePatientDetails(clinic: PublicClinic) {
       const result = (await response.json()) as { confirmation_code?: string };
       clearGuestVisit();
       router.push(
-        `/book/${clinic.slug}/confirmed?code=${encodeURIComponent(result.confirmation_code ?? "")}`,
+        `${clinicBookingUrl(clinic.slug, "confirmed")}?code=${encodeURIComponent(result.confirmation_code ?? "")}`,
       );
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Booking failed.");
+      const message = err instanceof Error ? err.message : "Booking failed.";
+      if (message === "Failed to fetch" || message.includes("NetworkError")) {
+        setSubmitError(
+          "Cannot reach the booking server. Ensure the API is running on port 8000, then try again.",
+        );
+      } else if (message === "Invalid guest token" || message === "Guest token required") {
+        setSubmitError(
+          "Your booking session expired. Return to AI triage and start again.",
+        );
+      } else {
+        setSubmitError(message);
+      }
     } finally {
       setSubmitting(false);
     }

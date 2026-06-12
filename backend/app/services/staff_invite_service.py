@@ -18,7 +18,7 @@ class StaffInviteError(Exception):
     pass
 
 
-def _row_invite(row: dict[str, Any]) -> dict[str, str | None]:
+def _row_invite(row: dict[str, Any], *, email_sent: bool = False) -> dict[str, str | bool | None]:
     return {
         "id": str(row["id"]),
         "email": str(row["email"]),
@@ -27,10 +27,11 @@ def _row_invite(row: dict[str, Any]) -> dict[str, str | None]:
         "expires_at": str(row["expires_at"]),
         "accepted_at": str(row["accepted_at"]) if row.get("accepted_at") else None,
         "created_at": str(row["created_at"]),
+        "email_sent": email_sent,
     }
 
 
-async def list_invites(tenant_id: str) -> list[dict[str, str | None]]:
+async def list_invites(tenant_id: str) -> list[dict[str, str | bool | None]]:
     rows = await supabase_client.list_staff_invites(tenant_id)
     return [_row_invite(row) for row in rows]
 
@@ -42,7 +43,7 @@ async def create_invite(
     email: str,
     role: str,
     settings: Settings | None = None,
-) -> dict[str, str | None]:
+) -> dict[str, str | bool | None]:
     settings = settings or get_settings()
     normalized_email = email.strip().lower()
 
@@ -84,11 +85,11 @@ async def create_invite(
         )
     else:
         logger.warning(
-            "Staff invite created but email not sent — configure Resend",
+            "Staff invite created but email not sent — verify Resend domain or copy invite link manually",
             extra={"extra_data": {"tenant_id": tenant_id, "accept_url": accept_url}},
         )
 
-    return _row_invite(row)
+    return _row_invite(row, email_sent=bool(message_id))
 
 
 async def preview_invite(token: str) -> dict[str, str | bool]:

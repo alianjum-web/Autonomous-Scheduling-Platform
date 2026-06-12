@@ -1,7 +1,14 @@
+"use client";
+
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import {
+  selectDefaultHome,
+  selectIsDoctor,
+} from "@/components/auth/store/authSelectors";
 import { ClinicalImage } from "@/components/common/atoms/ClinicalImage";
+import { useAppSelector } from "@/components/common/store/hooks";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { ImageAssetKey } from "@/lib/constants/images";
@@ -27,6 +34,9 @@ export function AccessGate({
   signedIn = false,
   className,
 }: AccessGateProps) {
+  const dashboardHref = useAppSelector(selectDefaultHome);
+  const isDoctor = useAppSelector(selectIsDoctor);
+
   return (
     <div className={cn("mx-auto flex max-w-md flex-col items-center px-4 py-20 text-center", className)}>
       {icon ? (
@@ -36,7 +46,7 @@ export function AccessGate({
       ) : null}
       <Card className="hero-glow w-full overflow-hidden">
         <div className="relative h-32 w-full sm:h-36">
-          <ClinicalImage asset={imageKey} variant="thumb" className="opacity-90" />
+          <ClinicalImage asset={imageKey} variant="thumb" className="opacity-90" priority />
           <div className="absolute inset-0 bg-linear-to-t from-card via-card/50 to-transparent" />
         </div>
         <CardContent className="space-y-5 p-8">
@@ -48,7 +58,7 @@ export function AccessGate({
             {signedIn ? (
               <>
                 <Button asChild size="lg" className="shadow-md">
-                  <Link href="/chat">Go to patient chat</Link>
+                  <Link href={dashboardHref}>Go to dashboard</Link>
                 </Button>
                 <Button asChild variant="outline" size="lg">
                   <Link href="/help">Staff access guide</Link>
@@ -57,20 +67,28 @@ export function AccessGate({
             ) : (
               <>
                 <Button asChild size="lg" className="shadow-md">
-                  <Link href="/sign-in">Sign in</Link>
+                  <Link href="/sign-in">Staff sign in</Link>
                 </Button>
-                <Button asChild variant="outline" size="lg">
-                  <Link href="/sign-up">{requireAdmin ? "Request staff access" : "Create account"}</Link>
-                </Button>
+                {requireAdmin ? (
+                  <Button asChild variant="outline" size="lg">
+                    <Link href="/accept-invite">I have an invite</Link>
+                  </Button>
+                ) : (
+                  <Button asChild variant="outline" size="lg">
+                    <Link href="/sign-up">Start your clinic</Link>
+                  </Button>
+                )}
               </>
             )}
           </div>
           <p className="text-xs text-muted-foreground">
             {signedIn && requireAdmin
-              ? "Ask your clinic administrator to set clinic_admin in Supabase app metadata for your account."
+              ? isDoctor
+                ? "You are signed in as a doctor — use your doctor dashboard, not the owner overview."
+                : "Only clinic owners can access this area. Ask your owner for an invite if you need staff access."
               : requireAdmin
-                ? "Staff accounts require clinic admin role in Supabase app metadata."
-                : "Secure Supabase authentication with tenant-scoped JWT claims."}
+                ? "Doctors and staff join via invitation. Patients book at /clinic/your-clinic without signing up."
+                : "Staff sign-in only. Patients use the public clinic booking page — no account required."}
           </p>
         </CardContent>
       </Card>

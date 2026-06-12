@@ -6,8 +6,15 @@ for the whole application so route modules stay thin and consistent.
 
 from __future__ import annotations
 
+from typing import cast
+
+import httpx
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from starlette.responses import Response
+from starlette.types import ExceptionHandler
 
 from app.services.ingestion_service import (
     DocumentAlreadyIngestedError,
@@ -39,6 +46,11 @@ async def _rate_limit_exceeded(_request: Request, _exc: RateLimitExceededError) 
         status.HTTP_429_TOO_MANY_REQUESTS,
         "Rate limit exceeded: max 3 AI requests per minute",
     )
+
+
+def _slowapi_rate_limit_exceeded(request: Request, exc: RateLimitExceeded) -> Response:
+    """HTTP middleware rate limits (slowapi) — separate from triage RateLimitExceededError."""
+    return _rate_limit_exceeded_handler(request, exc)
 
 
 async def _slot_lock(_request: Request, _exc: SlotLockError) -> JSONResponse:
@@ -90,16 +102,43 @@ async def _baa_required(_request: Request, exc: BAARequiredError) -> JSONRespons
     )
 
 
+async def _upstream_unavailable(_request: Request, _exc: Exception) -> JSONResponse:
+    return _json_error(
+        status.HTTP_503_SERVICE_UNAVAILABLE,
+        "Upstream service temporarily unavailable. Please retry.",
+    )
+
+
+async def _supabase_runtime_error(_request: Request, _exc: RuntimeError) -> JSONResponse:
+    return _json_error(
+        status.HTTP_503_SERVICE_UNAVAILABLE,
+        "Database temporarily unavailable. Please retry.",
+    )
+
+
+def _register(app: FastAPI, exc_type: type[Exception], handler: object) -> None:
+    """Register a typed handler (Pyright-safe cast for FastAPI's ExceptionHandler union)."""
+    app.add_exception_handler(exc_type, cast(ExceptionHandler, handler))
+
+
 def register_exception_handlers(app: FastAPI) -> None:
-    app.add_exception_handler(SessionNotFoundError, _session_not_found)
-    app.add_exception_handler(RateLimitExceededError, _rate_limit_exceeded)
-    app.add_exception_handler(SlotLockError, _slot_lock)
-    app.add_exception_handler(SlotUnavailableError, _slot_unavailable)
-    app.add_exception_handler(AppointmentNotFoundError, _appointment_not_found)
-    app.add_exception_handler(InvalidCategoryError, _invalid_category)
-    app.add_exception_handler(UnsupportedFileTypeError, _unsupported_file)
-    app.add_exception_handler(FileTooLargeError, _file_too_large)
-    app.add_exception_handler(EmptyFileError, _empty_file)
-    app.add_exception_handler(DocumentAlreadyIngestedError, _duplicate_document)
-    app.add_exception_handler(IngestionJobNotFoundError, _ingestion_job_not_found)
-    app.add_exception_handler(BAARequiredError, _baa_required)
+    for exc_type, handler in (
+        (RateLimitExceeded, _slowapi_rate_limit_exceeded),
+        (SessionNotFoundError, _session_not_found),
+        (RateLimitExceededError, _rate_limit_exceeded),
+        (SlotLockError, _slot_lock),
+        (SlotUnavailableError, _slot_unavailable),
+        (AppointmentNotFoundError, _appointment_not_found),
+        (InvalidCategoryError, _invalid_category),
+        (UnsupportedFileTypeError, _unsupported_file),
+        (FileTooLargeError, _file_too_large),
+        (EmptyFileError, _empty_file),
+        (DocumentAlreadyIngestedError, _duplicate_document),
+        (IngestionJobNotFoundError, _ingestion_job_not_found),
+        (BAARequiredError, _baa_required),
+        (httpx.RemoteProtocolError, _upstream_unavailable),
+        (httpx.ReadError, _upstream_unavailable),
+        (httpx.ConnectError, _upstream_unavailable),
+        (RuntimeError, _supabase_runtime_error),
+    ):
+        _register(app, exc_type, handler)

@@ -30,8 +30,12 @@ class BookingPageConfigResponse(BaseModel):
     enabled: bool
     welcome_message: str | None = None
     public_url: str | None = None
+    clinic_hours_info: str | None = None
+    clinic_services: str | None = None
 
 
 class BookingPageConfigRequest(BaseModel):
     enabled: bool
     welcome_message: str | None = None
+    clinic_hours_info: str | None = None
+    clinic_services: str | None = None

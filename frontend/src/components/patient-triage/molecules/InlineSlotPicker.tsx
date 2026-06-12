@@ -13,7 +13,6 @@ interface InlineSlotPickerProps {
 export function InlineSlotPicker({
   slots,
   selectedSlot,
-  disabled,
   onSelect,
 }: InlineSlotPickerProps) {
   if (slots.length === 0) return null;

@@ -6,6 +6,7 @@ import { selectClinicRole, selectAccessToken, selectAuthLoading, selectAuthSessi
 import { setSession } from "@/components/auth/store/authSlice";
 import { useAppDispatch, useAppSelector } from "@/components/common/store/hooks";
 import { createClient } from "@/lib/supabase/client";
+import { refreshAuthSessionOnce } from "@/lib/supabase/sessionRefresh";
 import type { ClinicRole } from "@/types/auth";
 import type { UseAuthSessionReturn } from "@/types/hooks";
 
@@ -19,9 +20,11 @@ export function useAuthSession(): UseAuthSessionReturn & { clinicRole: ClinicRol
 
   const refreshSession = useCallback(async () => {
     const supabase = createClient();
-    const { data } = await supabase.auth.refreshSession();
-    dispatch(setSession(data.session));
-    return data.session;
+    const session = await refreshAuthSessionOnce(supabase);
+    if (session) {
+      dispatch(setSession(session));
+    }
+    return session;
   }, [dispatch]);
 
   return {

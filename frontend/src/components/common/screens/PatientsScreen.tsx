@@ -1,9 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Users } from "lucide-react";
 
 import { useGetAppointmentsQuery } from "@/components/appointments/store/appointmentsApi";
+import {
+  PatientDetailPanel,
+  type PatientGroup,
+} from "@/components/doctors/organisms/PatientDetailPanel";
 import { useRoleGuard } from "@/components/common/hooks/useRoleGuard";
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
 import { useGetMyProviderQuery } from "@/components/common/store/staffApi";
@@ -11,31 +15,52 @@ import { AccessGate } from "@/components/common/molecules/AccessGate";
 import { LoadingScreen } from "@/components/common/molecules/LoadingScreen";
 import { PageHeader } from "@/components/common/molecules/PageHeader";
 import { PageShell } from "@/components/common/layout/PageShell";
+import { isActiveAppointment } from "@/lib/scheduling/appointmentTime";
+import { appointmentMatchesProvider } from "@/lib/scheduling/providerMatching";
+import type { Appointment } from "@/types/appointments";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+
+function groupPatients(appointments: Appointment[]): PatientGroup[] {
+  const map = new Map<string, PatientGroup>();
+
+  for (const appointment of appointments) {
+    const name = appointment.patient_name ?? "Unknown";
+    const phone = appointment.patient_phone ?? null;
+    const key = `${name.toLowerCase()}|${phone ?? ""}`;
+    const existing = map.get(key);
+    if (existing) {
+      existing.appointments.push(appointment);
+    } else {
+      map.set(key, { key, name, phone, appointments: [appointment] });
+    }
+  }
+
+  return [...map.values()].sort((a, b) => {
+    const latestA = Math.max(...a.appointments.map((row) => new Date(row.slot_start).getTime()));
+    const latestB = Math.max(...b.appointments.map((row) => new Date(row.slot_start).getTime()));
+    return latestB - latestA;
+  });
+}
 
 export function PatientsScreen() {
   const { isStaff, isDoctor, loading } = useRoleGuard();
   const { session } = useAuthSession();
-  const today = new Date().toISOString().slice(0, 10);
   const { data: provider } = useGetMyProviderQuery(undefined, { skip: !isDoctor });
-  const { data, isLoading } = useGetAppointmentsQuery(today, { skip: !isStaff });
+  const { data, isLoading } = useGetAppointmentsQuery(undefined, { skip: !isStaff });
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
-  const patients = useMemo(() => {
-    const rows = data?.appointments ?? [];
-    const filtered = isDoctor
-      ? rows.filter((a) => a.provider_name === provider?.display_name)
+  const bookings = useMemo(() => {
+    const rows = [...(data?.appointments ?? [])]
+      .filter((a) => isActiveAppointment(a.status))
+      .sort((a, b) => new Date(b.slot_start).getTime() - new Date(a.slot_start).getTime());
+    return isDoctor
+      ? rows.filter((a) => appointmentMatchesProvider(a, provider))
       : rows;
-    const map = new Map<string, { name: string; phone: string; lastVisit: string }>();
-    for (const appt of filtered) {
-      const key = `${appt.patient_name}-${appt.patient_phone}`;
-      map.set(key, {
-        name: appt.patient_name ?? "Unknown",
-        phone: appt.patient_phone ?? "—",
-        lastVisit: appt.slot_start,
-      });
-    }
-    return Array.from(map.values());
-  }, [data, isDoctor, provider?.display_name]);
+  }, [data, isDoctor, provider]);
+
+  const patients = useMemo(() => groupPatients(bookings), [bookings]);
+  const selectedPatient = patients.find((patient) => patient.key === selectedKey) ?? null;
 
   if (loading) return <LoadingScreen message="Loading patients…" />;
 
@@ -52,45 +77,67 @@ export function PatientsScreen() {
   }
 
   return (
-    <PageShell maxWidth="4xl" className="gap-8 pb-12">
+    <PageShell maxWidth="6xl" className="gap-8 pb-12">
       <PageHeader
         eyebrow={isDoctor ? "Doctor" : "Clinic"}
         title="Patients"
         description={
           isDoctor
-            ? "Patients who booked appointments with you."
+            ? "Your patients — tap a name to see visit history and AI triage summaries."
             : "All patients who booked through your clinic booking page."
         }
         imageKey="frontDesk"
       />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent patients</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          {isLoading ? (
-            <p className="text-muted-foreground">Loading…</p>
-          ) : patients.length === 0 ? (
-            <p className="text-muted-foreground">No patient bookings yet.</p>
-          ) : (
-            patients.map((patient) => (
-              <div
-                key={`${patient.name}-${patient.phone}`}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 px-3 py-2"
-              >
-                <div>
-                  <p className="font-medium">{patient.name}</p>
-                  <p className="text-xs text-muted-foreground">{patient.phone}</p>
-                </div>
-                <span className="text-xs text-muted-foreground">
-                  Last visit: {new Date(patient.lastVisit).toLocaleString()}
-                </span>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+      <div className="grid gap-6 lg:grid-cols-5">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>{isDoctor ? "Your patients" : "All patients"}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            {isLoading ? (
+              <p className="text-muted-foreground">Loading…</p>
+            ) : patients.length === 0 ? (
+              <p className="text-muted-foreground">No patient bookings yet.</p>
+            ) : (
+              patients.map((patient) => {
+                    const latest = [...patient.appointments].sort(
+                      (a, b) => new Date(b.slot_start).getTime() - new Date(a.slot_start).getTime(),
+                    )[0];
+                const active = selectedKey === patient.key;
+                return (
+                  <button
+                    key={patient.key}
+                    type="button"
+                    onClick={() => setSelectedKey(patient.key)}
+                    className={cn(
+                      "flex w-full flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition-colors",
+                      active
+                        ? "border-primary/40 bg-primary/5"
+                        : "border-border/60 hover:bg-muted/40",
+                    )}
+                  >
+                    <div>
+                      <p className="font-medium">{patient.name}</p>
+                      <p className="text-xs text-muted-foreground">{patient.phone ?? "No phone"}</p>
+                    </div>
+                    <div className="text-right text-xs text-muted-foreground">
+                      <p>{patient.appointments.length} visit{patient.appointments.length === 1 ? "" : "s"}</p>
+                      {latest ? (
+                        <p className="mt-1">{new Date(latest.slot_start).toLocaleDateString()}</p>
+                      ) : null}
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </CardContent>
+        </Card>
+
+        <div className="lg:col-span-3">
+          <PatientDetailPanel patient={selectedPatient} />
+        </div>
+      </div>
     </PageShell>
   );
 }

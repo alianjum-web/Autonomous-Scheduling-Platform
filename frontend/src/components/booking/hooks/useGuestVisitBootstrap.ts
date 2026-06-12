@@ -3,35 +3,34 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { clinicBookingUrl } from "@/lib/nav/roleNav";
 import { saveGuestVisit, updateGuestVisit, type GuestVisit } from "@/lib/booking/guestVisit";
-import { startGuestTriageSession, type PublicClinic } from "@/lib/booking/publicClinicApi";
+import { startGuestTriageSession } from "@/lib/booking/publicClinicApi";
 
-export function useGuestVisitBootstrap(clinic: PublicClinic, existing: GuestVisit | null) {
+export function useGuestVisitBootstrap(clinicSlug: string, existing: GuestVisit | null) {
   const router = useRouter();
-  const [visit, setVisit] = useState<GuestVisit | null>(existing);
+  const [startedVisit, setStartedVisit] = useState<GuestVisit | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(!existing);
+  const [loading, setLoading] = useState(() => !existing);
+
+  const visit = existing ?? startedVisit;
 
   useEffect(() => {
-    if (existing) {
-      setVisit(existing);
-      setLoading(false);
-      return;
-    }
+    if (existing) return;
 
     let cancelled = false;
-    void startGuestTriageSession(clinic.slug)
+    void startGuestTriageSession(clinicSlug)
       .then((session) => {
         if (cancelled) return;
         const next: GuestVisit = {
-          slug: clinic.slug,
+          slug: clinicSlug,
           sessionId: session.session_id,
           guestToken: session.guest_token,
           intake: {},
           bookingStep: "triage",
         };
         saveGuestVisit(next);
-        setVisit(next);
+        setStartedVisit(next);
       })
       .catch((err) => {
         if (!cancelled) {
@@ -45,12 +44,12 @@ export function useGuestVisitBootstrap(clinic: PublicClinic, existing: GuestVisi
     return () => {
       cancelled = true;
     };
-  }, [clinic.slug, existing]);
+  }, [clinicSlug, existing]);
 
   const goToDetails = (selectedSlot: string) => {
     updateGuestVisit({ selectedSlot, bookingStep: "details" });
-    router.push(`/book/${clinic.slug}/details`);
+    router.push(clinicBookingUrl(clinicSlug, "details"));
   };
 
-  return { visit, loading, error, goToDetails, setVisit };
+  return { visit, loading, error, goToDetails, setVisit: setStartedVisit };
 }

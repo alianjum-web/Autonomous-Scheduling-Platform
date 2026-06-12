@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 
 from app.adapters.llm.providers import BaseLLMProvider, build_provider
 from app.adapters.llm.types import ProviderProbeResult
@@ -75,7 +75,7 @@ async def stream_chat(
     *,
     max_tokens: int = 500,
     temperature: float = 0.4,
-) -> AsyncIterator[str]:
+) -> AsyncGenerator[str, None]:
     flags = get_feature_flags()
     if not flags.features.triage.streaming_enabled:
         text = await chat_complete(

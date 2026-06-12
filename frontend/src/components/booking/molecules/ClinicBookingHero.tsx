@@ -1,3 +1,4 @@
+import { clinicBookingUrl } from "@/lib/nav/roleNav";
 import Link from "next/link";
 import { Calendar, MessageSquare, Shield } from "lucide-react";
 
@@ -35,7 +36,7 @@ export function ClinicBookingHero({ clinic }: ClinicBookingHeroProps) {
         </ul>
 
         <Button asChild className="h-11 w-full text-base shadow-md">
-          <Link href={`/book/${clinic.slug}/visit`}>Start AI triage</Link>
+          <Link href={clinicBookingUrl(clinic.slug, "visit")}>Start AI triage</Link>
         </Button>
 
         <p className="text-center text-xs text-muted-foreground">

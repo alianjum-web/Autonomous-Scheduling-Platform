@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useAppDispatch } from "@/components/common/store/hooks";
 
+import { appointmentsApi } from "@/components/appointments/store/appointmentsApi";
 import {
   removeAppointment,
   upsertAppointment,
@@ -39,6 +40,7 @@ export function useAppointmentSync(tenantId: string | null) {
           } else {
             dispatch(upsertAppointment(row));
           }
+          dispatch(appointmentsApi.util.invalidateTags(["Appointments"]));
         },
       )
       .subscribe();
