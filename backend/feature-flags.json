@@ -4,8 +4,8 @@
   "hot_reload": true,
   "features": {
     "ai": {
-      "chat_provider": "ollama",
-      "embedding_provider": "ollama"
+      "chat_provider": "gemini",
+      "embedding_provider": "gemini"
     },
     "triage": {
       "streaming_enabled": true,

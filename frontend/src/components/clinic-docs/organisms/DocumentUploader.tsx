@@ -6,6 +6,7 @@ import { Upload } from "lucide-react";
 import { useReduxForm } from "@/components/common/hooks/useReduxForm";
 import { useAppDispatch, useAppSelector } from "@/components/common/store/hooks";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -83,8 +84,22 @@ export function DocumentUploader({ onUploaded, disabled = false }: DocumentUploa
   });
 
   return (
+    <Card className="h-full">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Upload document</CardTitle>
+        <CardDescription>
+          PDF or DOCX — choose <span className="font-medium text-foreground">FAQ</span> for hours,
+          services, and patient questions.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
     <Form {...form}>
       <form onSubmit={onSubmit} className="space-y-4">
+        {disabled ? (
+          <p className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-muted-foreground">
+            Uploads are disabled until your clinic acknowledges the HIPAA BAA under Settings.
+          </p>
+        ) : null}
         <div
           onDragOver={(e) => {
             e.preventDefault();
@@ -171,5 +186,7 @@ export function DocumentUploader({ onUploaded, disabled = false }: DocumentUploa
         ) : null}
       </form>
     </Form>
+      </CardContent>
+    </Card>
   );
 }

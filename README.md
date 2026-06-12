@@ -1,48 +1,48 @@
-# AI-First Patient Intake & Autonomous Scheduling Platform
+# Symptra — AI-First Patient Intake & Autonomous Scheduling
 
-Production-grade platform for high-end medical and dental clinics — AI-driven patient intake, autonomous scheduling, and HIPAA-aware multi-tenant data isolation.
+Production-grade platform for medical and dental clinics: streaming AI triage, autonomous booking, staff dashboards, and HIPAA-aware multi-tenant isolation.
 
 | | |
 |---|---|
-| **Version** | 1.0 — Sprints 1–4 complete |
-| **Compliance** | HIPAA-Aware · GDPR-Aligned · RLS Enforced · Zero-PHI Logs |
-| **Stack** | Next.js · Supabase · FastAPI · LangGraph · pgvector · OpenAI |
-| **Audience** | Senior Engineers, Tech Leads, DevOps, QA, Compliance Officers |
+| **Product** | Symptra Scheduling |
+| **Compliance** | HIPAA-aware · RLS-enforced · BAA gating · Zero-PHI logs |
+| **Stack** | Next.js 16 · Supabase · FastAPI · LangGraph · pgvector · Redis |
+| **LLM** | Pluggable — Ollama · OpenAI · Gemini · Grok (`feature-flags.json`) |
 
 ---
 
 ## Overview
 
-This platform delivers an AI-first patient intake widget and staff dashboard for clinic operations. Patients interact through a streaming chat interface; a LangGraph agent handles triage, RAG lookups, and booking; front-desk staff receive real-time escalations via Supabase Realtime.
+Symptra connects three audiences in one tenant-isolated workspace:
 
-**Design principles:**
+| Audience | How they access the app | Primary capabilities |
+|---|---|---|
+| **Clinic owner** | Sign up → onboarding → `/front-desk` | Doctors, billing, clinic docs, AI triage, settings, public booking page |
+| **Staff (front desk)** | Invite acceptance | Appointments, patients, AI triage escalations |
+| **Doctor** | Email invite → `/doctor` | Schedule, patients, triage queue, intake forms |
+| **Patient (guest)** | `/clinic/{slug}/visit` — **no account** | AI chat, slot picker, details, confirmation |
 
-- **Network boundary** — LLM API keys, service-role keys, and EHR credentials never reach the browser. The Next.js frontend talks only to route handlers; route handlers forward to FastAPI.
-- **Tenant isolation** — Every table enforces Row-Level Security. JWT claims carry `tenant_id` injected at login.
-- **Deterministic safety** — Emergency keyword detection and distributed Redis locks override AI behavior where clinical or scheduling integrity requires it.
+**Design principles**
+
+- **Network boundary** — LLM keys, service-role keys, and EHR credentials stay on the backend. The browser talks to Next.js; Next.js proxies to FastAPI.
+- **Tenant isolation** — Row-Level Security on all clinic data. JWT claims carry `tenant_id` and `role`.
+- **Deterministic safety** — Emergency keyword detection and Redis distributed locks override AI where clinical or scheduling integrity requires it.
 
 ---
 
 ## Tech Stack
 
-All packages are pinned to current stable releases as of June 2026.
-
-| Technology | Version | Role |
+| Layer | Technology | Role |
 |---|---|---|
-| [Next.js](https://nextjs.org) (App Router) | 16.2.x | Frontend — RSC, streaming SSR, route handlers |
-| [React](https://react.dev) | 19.2.x | UI runtime |
-| [Tailwind CSS](https://tailwindcss.com) | 4.x | Utility-first styling |
-| [shadcn/ui](https://ui.shadcn.com) | latest | Accessible, in-repo component primitives |
-| [Redux Toolkit](https://redux-toolkit.js.org) + RTK Query | 2.12.x | Global state + server-state caching |
-| [Supabase](https://supabase.com) (PostgreSQL 16) | JS 2.107.x · Python 2.31.x | Auth, RLS, Realtime, pgvector |
-| [FastAPI](https://fastapi.tiangolo.com) | 0.136.x | Async AI microservice gateway |
-| [Python](https://python.org) | 3.12 | Backend runtime |
-| [LangGraph](https://langchain-ai.github.io/langgraph/) | 1.2.x | Stateful multi-agent orchestration |
-| [OpenAI](https://platform.openai.com) | GPT-4o / text-embedding-3-small | LLM + 1536-dim embeddings |
-| [pgvector](https://github.com/pgvector/pgvector) | — | Native Postgres vector search |
-| [Redis](https://redis.io) (Upstash / local) | 8.x | Distributed slot-locking |
-| [Vitest](https://vitest.dev) | 4.x | Frontend unit tests |
-| [pytest](https://pytest.org) | 9.x | Backend integration tests |
+| Frontend | Next.js 16 (App Router), React 19, Tailwind 4, shadcn/ui | Marketing site, staff dashboards, public booking |
+| State | Redux Toolkit + RTK Query | Client state, API caching, auth session |
+| Auth & DB | Supabase (PostgreSQL 16, Auth, Realtime) | Users, RLS, migrations, Realtime escalations |
+| Vectors | pgvector | Clinic document RAG |
+| Backend | FastAPI, Python 3.12, Gunicorn/Uvicorn | AI gateway, scheduling, ingest, compliance |
+| Agents | LangGraph | Triage graph — intent, RAG, slots, booking, escalation |
+| Cache / locks | Redis 8 | Slot locking, rate limits |
+| LLM | `backend/feature-flags.json` | Hot-swappable chat + embedding providers |
+| Tests | Vitest (frontend), pytest (backend) | Unit and integration tests |
 
 ---
 
@@ -50,67 +50,69 @@ All packages are pinned to current stable releases as of June 2026.
 
 ```
 Autonomous-Scheduling-Platform/
-├── frontend/                  # Next.js 16 App Router application
+├── frontend/                      # Next.js application
 │   └── src/
-│       ├── common/            # Shared components, hooks, utils (cross-module only)
+│       ├── app/
+│       │   ├── (auth)/            # Sign-in, onboarding, accept-invite, public booking
+│       │   │   └── clinic/[slug]/[[...step]]/   # Guest patient flow (visit → details → confirmed)
+│       │   └── (platform)/        # Staff dashboards (owner, doctor, staff)
 │       ├── components/
-│       │   ├── ui/            # shadcn/ui primitives (Button, Input, Badge, …)
-│       │   └── patient-triage/  # Sprint 1 — live patient chat module
-│       │       ├── atoms/
-│       │       ├── molecules/
-│       │       ├── organisms/
-│       │       └── screens/
-│       ├── hooks/             # useStreamingChat, useAuthSession
-│       ├── store/             # Redux slices + RTK Query API
-│       ├── lib/supabase/      # Browser + server Supabase clients
-│       └── middleware.ts      # Subdomain → tenant slug routing
+│       │   ├── auth/              # Onboarding, invites, session sync, AuthBootstrap
+│       │   ├── booking/           # Public clinic booking client screens
+│       │   ├── patient-triage/    # Chat UI, slot picker, streaming hooks
+│       │   ├── appointments/      # Calendar, front-desk workspace
+│       │   ├── clinic-docs/       # Document upload + RAG ingestion
+│       │   ├── doctors/           # Doctor dashboard, schedule, triage queue
+│       │   ├── platform/          # Marketing home page sections
+│       │   └── common/            # Layout, settings, shared hooks, Redux store
+│       ├── lib/
+│       │   ├── nav/roleNav.ts     # Sidebar nav per role (keep in sync with proxy)
+│       │   └── proxy/roleAccess.ts # Route guards (used by src/proxy.ts)
+│       └── proxy.ts               # Auth, role redirects, Supabase session cookies
 │
-├── backend/                   # FastAPI AI microservice
+├── backend/                       # FastAPI AI microservice
 │   ├── app/
-│   │   ├── main.py            # App init, CORS, lifespan warm-up
-│   │   ├── api/v1/endpoints/  # triage (session, SSE stream)
-│   │   ├── core/              # config, security (JWT), PHI-safe logger
-│   │   └── services/          # LangGraph agent, Supabase client
-│   └── supabase/              # Supabase CLI project (run db:* from backend/)
-│       ├── config.toml
-│       └── migrations/        # PostgreSQL schema + RLS policies
+│   │   ├── api/v1/endpoints/      # triage, public, schedule, ingest, staff, compliance, …
+│   │   ├── adapters/llm/          # Ollama, OpenAI, Gemini, Grok providers
+│   │   ├── core/                  # config, security, feature flags, JWT
+│   │   └── services/              # LangGraph agent, RAG, scheduling, Supabase client
+│   ├── feature-flags.json         # Switch AI provider without code changes
+│   └── supabase/migrations/       # Schema + RLS (run db:push from backend/)
 │
-├── docker-compose.yml         # FastAPI + Redis for local development
-└── docs/                      # Detailed architecture, schema, roadmap
+├── docker-compose.yml             # Redis + API (port 8000)
+├── docs/                          # Architecture, migrations, deployment, HIPAA
+└── package.json                   # Monorepo scripts (dev, test, db:*)
 ```
-
-### Planned modules (Sprints 2–4)
-
-| Module | Path | Status |
-|---|---|---|
-| Patient Triage | `frontend/src/components/patient-triage/` | **Sprint 1 — implemented** |
-| Clinic Docs (RAG ingestion) | `frontend/src/modules/clinic-docs/` | Sprint 2 |
-| Appointments Dashboard | `frontend/src/modules/appointments/` | Sprint 4 |
-| Schedule API | `backend/app/api/v1/endpoints/schedule.py` | Sprint 3 |
-| Ingest API | `backend/app/api/v1/endpoints/ingest.py` | Sprint 2 |
 
 ---
 
 ## Architecture
 
+### Public patient booking (no login)
+
 ```mermaid
 sequenceDiagram
-    participant Patient as Patient Browser
+    participant Patient
     participant Next as Next.js
     participant API as FastAPI
-    participant DB as Supabase (Postgres)
-    participant Agent as LangGraph Agent
+    participant Agent as LangGraph
+    participant DB as Supabase
 
-    Patient->>Next: Open chat widget
-    Next->>API: POST /v1/triage/session
-    API->>DB: INSERT patient_sessions (RLS)
-    Patient->>API: GET /v1/triage/stream/{id} (SSE)
-    API->>Agent: classify_intent → respond
-    Agent-->>API: Token stream
-    API-->>Patient: SSE tokens → LiveChatPanel
+    Patient->>Next: /clinic/{slug}/visit
+    Next->>API: POST /v1/public/clinics/{slug}/triage/session
+    API->>DB: Create guest session + JWT
+    Patient->>API: POST …/triage/message/{id} (SSE)
+    API->>Agent: intent → RAG → slots → respond
+    Agent-->>Patient: Streamed tokens + slot metadata
+    Patient->>API: POST …/book
+    API->>DB: Appointment + Redis lock
 ```
 
-The FastAPI service is the sole AI processing gateway. See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for the full module layout, backend clean-architecture layers, and system interaction table.
+### Staff-authenticated triage
+
+Staff and internal tools use `/v1/triage/*` with a Supabase JWT (`tenant_id` + role). Owners manage knowledge base at `/clinic-docs`; patients never see that UI.
+
+See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for full module layout and data-flow tables.
 
 ---
 
@@ -120,96 +122,150 @@ The FastAPI service is the sole AI processing gateway. See [docs/ARCHITECTURE.md
 
 - Node.js 20+
 - Python 3.12+
-- Docker & Docker Compose
-- A [Supabase](https://supabase.com) project (PostgreSQL 16)
+- Docker & Docker Compose (for Redis + optional containerized API)
+- A [Supabase](https://supabase.com) project
 
-### 1. Database
-
-Migration files: `backend/supabase/migrations/`. Full guide: [docs/DATABASE_MIGRATIONS.md](docs/DATABASE_MIGRATIONS.md).
-
-**One-time setup** — get your **project ref** from the Supabase dashboard URL and your **database password** from Database → Settings → Reset database password (not an API key).
+### 1. Install dependencies
 
 ```bash
-npm install --prefix backend
-cd backend && npx supabase login    # once
-
-npm run db:validate
-export SUPABASE_DB_PASSWORD='<database-password>'
-npm run db:link -- --project-ref <ref>   # once — must include password (see link.sh)
-npm run db:push                          # apply pending migrations
-npm run gen:types                        # sync frontend/src/types/database.ts
+npm run setup          # frontend + backend npm deps, Python venv
 ```
 
-**Each time you add a migration:** `npm run db:push` then `npm run gen:types`.
+### 2. Environment files
 
-**Without CLI:** run SQL from `backend/supabase/migrations/` in the Supabase SQL Editor (in filename order).
-
-Configure the **Custom Access Token Hook** in Supabase Dashboard → Authentication → Hooks → `public.custom_access_token_hook`.
-
-### 2. Environment Variables
-
-**Frontend** — copy and fill from `frontend/.env.example`:
+**Frontend**
 
 ```bash
 cp frontend/.env.example frontend/.env.development
-cp frontend/.env.example frontend/.env.production   # optional: local prod simulation
 ```
 
 | Variable | Description |
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon (public) key |
-| `NEXT_PUBLIC_API_URL` | FastAPI base URL (default `http://localhost:8000`) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
+| `NEXT_PUBLIC_API_URL` | FastAPI base URL (`http://localhost:8000`) |
 
-**Backend** — copy and fill from `backend/.env.example`:
+**Backend**
 
 ```bash
 cp backend/.env.example backend/.env.development
-cp backend/.env.example backend/.env.production   # optional: local prod simulation
 ```
 
 | Variable | Description |
 |---|---|
 | `SUPABASE_URL` | Supabase project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service-role key (server only, never expose) |
-| `SUPABASE_JWT_SECRET` | JWT secret for Bearer token verification |
-| `FRONTEND_ORIGIN` | Allowed CORS origin (default `http://localhost:3000`) |
-| `REDIS_URL` | Redis connection string |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service-role key (server only) |
+| `SUPABASE_JWT_SECRET` | JWT secret for Bearer verification |
+| `FRONTEND_ORIGIN` | CORS origin (`http://localhost:3000`) |
+| `REDIS_URL` | `redis://localhost:6379/0` (local) or Docker internal URL |
+| `GEMINI_API_KEY` | Google AI Studio key (if using Gemini) |
+| `OPENAI_API_KEY` | OpenAI key (if using OpenAI) |
 
-### 3. Start Services
+Configure the **Custom Access Token Hook** in Supabase → Authentication → Hooks → `public.custom_access_token_hook`.
+
+### 3. Database migrations
+
+Full guide: [docs/DATABASE_MIGRATIONS.md](./docs/DATABASE_MIGRATIONS.md).
 
 ```bash
-# Terminal 1 — Redis + FastAPI
-docker compose up
+cd backend && npx supabase login    # once
 
-# Terminal 2 — Next.js frontend
-cd frontend && npm install && npm run dev
+npm run db:validate
+export SUPABASE_DB_PASSWORD='<database-password>'
+npm run db:link -- --project-ref <ref>   # once
+npm run db:push                          # apply pending migrations
+npm run gen:types                        # sync frontend/src/types/database.ts
 ```
 
-Open [http://localhost:3000/chat](http://localhost:3000/chat) for the patient chat widget.
+Run `npm run db:push` after pulling new migrations, then `npm run gen:types`.
 
-### 4. Run Tests
+### 4. AI provider
+
+Edit `backend/feature-flags.json` — no redeploy needed when `hot_reload` is true:
+
+```json
+"ai": {
+  "chat_provider": "gemini",
+  "embedding_provider": "gemini"
+}
+```
+
+| Provider | Env key | Notes |
+|---|---|---|
+| `ollama` | — | Local [Ollama](https://ollama.com) at `http://localhost:11434` |
+| `openai` | `OPENAI_API_KEY` | GPT-4o-mini + text-embedding-3-small |
+| `gemini` | `GEMINI_API_KEY` | gemini-2.0-flash + text-embedding-004 |
+| `grok` | `GROK_API_KEY` | xAI Grok |
+
+Check status: `GET /v1/ai/status` (also after backend starts).
+
+### 5. Start development
+
+**Option A — Monorepo (Docker API + Next.js)**
 
 ```bash
-# Frontend (Vitest)
-cd frontend && npm test
+npm run dev            # docker API + Redis in background, frontend on :3000
+npm run stop           # tear down Docker services
+```
 
-# Backend (pytest)
-cd backend && pip install -r requirements.txt && pytest
+**Option B — Local hot-reload backend (recommended for backend work)**
+
+```bash
+npm run stop                              # free port 8000
+cd backend && npm run dev                 # Uvicorn --reload on :8000
+cd frontend && npm run dev                # separate terminal
+```
+
+> Only one process can bind port **8000** — stop the Docker `api` service before running `backend/npm run dev`.
+
+**URLs**
+
+| URL | Purpose |
+|---|---|
+| [http://localhost:3000](http://localhost:3000) | Marketing home |
+| [http://localhost:3000/clinic/{slug}/visit](http://localhost:3000/clinic/your-slug/visit) | Guest patient booking |
+| [http://localhost:3000/front-desk](http://localhost:3000/front-desk) | Owner dashboard |
+| [http://localhost:8000/docs](http://localhost:8000/docs) | FastAPI OpenAPI |
+
+### 6. Tests
+
+```bash
+npm test                    # backend pytest + frontend vitest
+npm run test:backend
+npm run test:frontend
+npm run lint
 ```
 
 ---
 
-## API Reference (Sprint 1)
+## Roles & Navigation
 
-All endpoints require `Authorization: Bearer <supabase_jwt>` with a valid `tenant_id` claim.
+Sidebar items are defined in `frontend/src/lib/nav/roleNav.ts` and enforced in `frontend/src/lib/proxy/roleAccess.ts`.
 
-| Method | Endpoint | Description |
+| Role | Home | Key routes |
 |---|---|---|
-| `POST` | `/v1/triage/session` | Create a patient intake session |
-| `GET` | `/v1/triage/stream/{session_id}` | SSE token stream from LangGraph agent |
+| **Owner** (`admin`) | `/front-desk` | Doctors, patients, appointments, AI triage, **clinic docs**, settings, billing |
+| **Staff** (`clinic_admin`) | `/front-desk` | Appointments, patients, AI triage, settings |
+| **Doctor** | `/doctor` | Appointments, patients, schedule, triage queue, intake forms |
 
-Planned endpoints (Sprints 2–4): `/v1/schedule/*`, `/v1/ingest/*`, `/v1/triage/escalate/{id}`.
+**HIPAA BAA** — Owners acknowledge the BAA under **Settings** to enable AI chat and document embedding. See [docs/HIPAA_COMPLIANCE.md](./docs/HIPAA_COMPLIANCE.md).
+
+---
+
+## API Overview
+
+Interactive docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+| Prefix | Auth | Description |
+|---|---|---|
+| `/v1/public/clinics/{slug}/*` | Guest JWT | Public booking, triage SSE, book appointment |
+| `/v1/triage/*` | Staff JWT | Internal triage sessions, SSE, escalation |
+| `/v1/schedule/*` | Staff JWT | Slots, appointments, calendar & booking page config |
+| `/v1/ingest/*` | Owner JWT | Document upload, embedding jobs, chunks |
+| `/v1/staff/*` | Staff JWT | Invites, doctors, dashboards |
+| `/v1/compliance/*` | Staff JWT | BAA status, acknowledge, audit report |
+| `/v1/settings/*` | Staff JWT | Workspace settings |
+| `/v1/ai/*` | Staff JWT | Provider status, reload feature flags |
 
 ---
 
@@ -217,41 +273,27 @@ Planned endpoints (Sprints 2–4): `/v1/schedule/*`, `/v1/ingest/*`, `/v1/triage
 
 | Control | Implementation |
 |---|---|
-| Row-Level Security | All tables; tenant isolation via JWT `tenant_id` claim |
-| PHI-safe logging | Structured JSON logger redacts `patient_phone`, `patient_email` |
-| API key isolation | OpenAI / service-role keys live in FastAPI env only |
-| CORS | Restricted to `FRONTEND_ORIGIN` in production |
-| Audit trail | Append-only `audit_logs` table (Sprint 4) |
-| Emergency override | Deterministic keyword interceptor (Sprint 3) |
-
-See [docs/DATABASE.md](./docs/DATABASE.md) for the full target schema, RLS policy matrix, and pgvector RAG setup.
-
----
-
-## 28-Day Roadmap
-
-| Sprint | Days | Focus | Status |
-|---|---|---|---|
-| **Sprint 1** | 1–7 | Multi-tenant groundwork, patient chat UI, SSE streaming | In progress |
-| **Sprint 2** | 8–14 | Clinic policy ingestion & RAG pipeline | Planned |
-| **Sprint 3** | 15–21 | LangGraph scheduling agent & triage engine | Planned |
-| **Sprint 4** | 22–28 | Human handoffs, dashboard & production hardening | Planned |
-
-Full deliverables, edge cases, and test criteria: [docs/ROADMAP.md](./docs/ROADMAP.md).
+| Row-Level Security | All tenant tables; isolation via JWT `tenant_id` |
+| Role-based routes | Next.js `proxy.ts` + `roleAccess.ts` |
+| PHI-safe logging | Structured JSON logger redacts sensitive fields |
+| API key isolation | LLM and service-role keys in backend env only |
+| BAA gating | `require_tenant_baa()` blocks AI ingest/chat when unsigned |
+| Emergency override | Keyword interceptor short-circuits LangGraph |
+| Slot integrity | Redis distributed locks on booking |
 
 ---
 
-## Documentation Index
+## Documentation
 
 | Document | Contents |
 |---|---|
-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Frontend module layout, backend layers, data flow |
-| [docs/DATABASE.md](./docs/DATABASE.md) | Schema, RLS policies, pgvector, audit logs |
-| [docs/ROADMAP.md](./docs/ROADMAP.md) | 28-day sprint execution map with test goals |
-| [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Infrastructure overview, Vercel/Railway deploy, CI/CD |
-| [docs/HIPAA_COMPLIANCE.md](./docs/HIPAA_COMPLIANCE.md) | Pre-launch HIPAA checklist, verification scripts |
-| [docs/BREACH_NOTIFICATION.md](./docs/BREACH_NOTIFICATION.md) | 60-day HIPAA breach notification procedure |
-| [frontend/README.md](./frontend/README.md) | Frontend-specific dev notes |
+| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Module layout, backend layers, data flow |
+| [docs/DATABASE.md](./docs/DATABASE.md) | Schema, RLS, pgvector |
+| [docs/DATABASE_MIGRATIONS.md](./docs/DATABASE_MIGRATIONS.md) | Supabase CLI workflow |
+| [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Vercel, Railway, CI/CD |
+| [docs/HIPAA_COMPLIANCE.md](./docs/HIPAA_COMPLIANCE.md) | Pre-launch checklist |
+| [frontend/README.md](./frontend/README.md) | Frontend module conventions |
+| [backend/README.md](./backend/README.md) | Backend scripts and layout |
 
 ---
 

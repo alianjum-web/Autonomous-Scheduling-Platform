@@ -6,8 +6,8 @@ import { pageMetadata } from "@/lib/metadata";
 
 export const dynamic = "force-dynamic";
 export const metadata = pageMetadata(
-  "AI Triage",
-  "Clinic staff AI triage workspace — patients book on your public clinic page without an account.",
+  "Staff triage",
+  "Monitor AI intake sessions and escalations — patients book on your public clinic page without an account.",
 );
 
 export default function ChatPage() {

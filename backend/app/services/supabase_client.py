@@ -122,19 +122,21 @@ class SupabaseService:
 
     # ── Tenants / compliance ───────────────────────────────────────────────────
 
+    _TENANT_SELECT = (
+        "id, slug, name, hipaa_baa_signed_at, hipaa_baa_signed_by, created_at, "
+        "timezone, calendar_provider, google_calendar_id, "
+        "business_hours_start, business_hours_end, slot_duration_minutes, "
+        "booking_enabled, booking_welcome_message"
+    )
+    _TENANT_SELECT_WITH_KNOWLEDGE = f"{_TENANT_SELECT}, clinic_hours_info, clinic_services"
+
     async def get_tenant(self, tenant_id: str) -> dict[str, Any] | None:
         def _fetch() -> dict[str, Any] | None:
-            def _query() -> dict[str, Any] | None:
+            def _query(select: str) -> dict[str, Any] | None:
                 result = (
                     self.get_client()
                     .table("tenants")
-                    .select(
-                        "id, slug, name, hipaa_baa_signed_at, hipaa_baa_signed_by, created_at, "
-                        "timezone, calendar_provider, google_calendar_id, "
-                        "business_hours_start, business_hours_end, slot_duration_minutes, "
-                        "booking_enabled, booking_welcome_message, "
-                        "clinic_hours_info, clinic_services"
-                    )
+                    .select(select)
                     .eq("id", tenant_id)
                     .limit(1)
                     .execute()
@@ -142,7 +144,16 @@ class SupabaseService:
                 rows = _rows(_response_data(result))
                 return rows[0] if rows else None
 
-            return _run_with_retry(_query)
+            try:
+                return _run_with_retry(lambda: _query(self._TENANT_SELECT_WITH_KNOWLEDGE))
+            except Exception as exc:
+                if "clinic_hours_info" not in str(exc) and "42703" not in str(exc):
+                    raise
+                logger.warning(
+                    "tenants.clinic_hours_info missing — run db:push; using legacy tenant select",
+                    extra={"extra_data": {"tenant_id": tenant_id}},
+                )
+                return _run_with_retry(lambda: _query(self._TENANT_SELECT))
 
         return await self._run(_fetch)
 

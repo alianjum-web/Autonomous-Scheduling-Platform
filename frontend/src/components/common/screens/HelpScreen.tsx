@@ -21,7 +21,7 @@ const GUIDES: {
     icon: MessageSquare,
     title: "Guest patient booking",
     description:
-      "Patients visit /clinic/your-slug — no login. They complete AI triage, pick a slot, and confirm. Staff triage chat is under AI Triage for owners and front desk.",
+      "Patients visit /clinic/your-slug — no login. They complete AI triage, pick a slot, and confirm. Staff monitor sessions under Staff triage in the sidebar.",
     href: "/settings",
     cta: "Publish booking page",
     imageKey: "chat",

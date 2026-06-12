@@ -1,0 +1,1 @@
+- sessionRefresh.ts why this instead of removing the cause that is causing the request to the server again and again

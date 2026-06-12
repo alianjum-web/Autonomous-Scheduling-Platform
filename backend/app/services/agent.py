@@ -583,7 +583,29 @@ async def run_triage_agent(
         message_history=cast(list[dict], initial_state["messages"]),
     )
 
-    graph_task = asyncio.create_task(graph.ainvoke(initial_state, config=config))
+    async def _run_graph() -> AgentState:
+        try:
+            return cast(AgentState, await graph.ainvoke(initial_state, config=config))
+        except Exception as exc:
+            logger.warning("Triage graph failed", extra={"extra_data": {"error": str(exc)}})
+            fallback_state: AgentState = {
+                **initial_state,
+                "intent": "booking_request" if "book" in message.lower() or "appointment" in message.lower() else "unknown",
+            }
+            fallback = _fallback_response(fallback_state)
+            if not fallback_state.get("available_slots"):
+                fallback = (
+                    "I'm having trouble reaching our AI assistant right now. "
+                    "Please try again in a moment, or contact the clinic directly."
+                )
+            tokens = await _stream_text_to_queue(session_id, fallback)
+            return {
+                **fallback_state,
+                "final_response": fallback,
+                "token_stream": tokens,
+            }
+
+    graph_task = asyncio.create_task(_run_graph())
 
     while True:
         token = await queue.get()

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   Activity,
   BookOpen,
+  ExternalLink,
   HelpCircle,
   LogOut,
   Stethoscope,
@@ -16,9 +17,17 @@ import {
   selectClinicRole,
   selectDefaultHome,
   selectIsAuthenticated,
+  selectIsClinicManager,
+  selectTenantId,
 } from "@/components/auth/store/authSelectors";
 import { useAuthSession } from "@/components/common/hooks/useAuthSession";
-import { navForRole } from "@/lib/nav/roleNav";
+import { useGetUserProfileQuery } from "@/components/common/store/settingsApi";
+import {
+  clinicBookingUrl,
+  navForRole,
+  navSectionsForRole,
+  type NavItem,
+} from "@/lib/nav/roleNav";
 import { ROLE_LABELS, type ClinicRole } from "@/types/auth";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -29,11 +38,51 @@ const SECONDARY_NAV = [
   { href: "/status", label: "System Status", icon: Activity },
 ] as const;
 
+const navLinkClass = (active: boolean) =>
+  cn(
+    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
+    active
+      ? "sidebar-nav-active"
+      : "text-sidebar-foreground hover:bg-muted hover:text-foreground",
+  );
+
+/** Highlight the most specific nav item (e.g. /doctor/triage, not /doctor). */
+function isNavItemActive(pathname: string, href: string, navItems: NavItem[]): boolean {
+  if (pathname === href) return true;
+  if (!pathname.startsWith(`${href}/`)) return false;
+  return !navItems.some(
+    (item) =>
+      item.href !== href &&
+      item.href.startsWith(`${href}/`) &&
+      (pathname === item.href || pathname.startsWith(`${item.href}/`)),
+  );
+}
+
 function roleBadgeClass(role: ClinicRole | null) {
   if (role === "admin") return "bg-primary/10 text-primary";
   if (role === "doctor") return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400";
   if (role === "clinic_admin") return "bg-blue-500/10 text-blue-700 dark:text-blue-400";
   return "bg-muted text-muted-foreground";
+}
+
+function SidebarNavLinks({
+  items,
+  pathname,
+  allItems,
+}: {
+  items: NavItem[];
+  pathname: string;
+  allItems: NavItem[];
+}) {
+  return items.map(({ href, label, icon: Icon }) => {
+    const active = isNavItemActive(pathname, href, allItems);
+    return (
+      <Link key={href} href={href} className={navLinkClass(active)}>
+        <Icon className="size-4 shrink-0" aria-hidden />
+        {label}
+      </Link>
+    );
+  });
 }
 
 export function DashboardSidebar() {
@@ -44,9 +93,19 @@ export function DashboardSidebar() {
   const profileReady = useAppSelector(selectAuthProfileReady);
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
   const clinicRole = useAppSelector(selectClinicRole);
+  const tenantId = useAppSelector(selectTenantId);
+  const isClinicManager = useAppSelector(selectIsClinicManager);
   const defaultHome = useAppSelector(selectDefaultHome);
   const mainNav = navForRole(clinicRole);
+  const navSections = navSectionsForRole(clinicRole);
   const navLoading = authLoading || (isAuthenticated && !profileReady);
+
+  const { data: userProfile } = useGetUserProfileQuery(undefined, {
+    skip: !isClinicManager || !tenantId,
+  });
+  const patientBookingUrl = userProfile?.workspaceSlug
+    ? clinicBookingUrl(userProfile.workspaceSlug, "visit")
+    : null;
 
   const handleSignOut = async () => {
     const supabase = createClient();
@@ -54,6 +113,10 @@ export function DashboardSidebar() {
     router.push("/");
     router.refresh();
   };
+
+  const skeletonCount = navSections
+    ? navSections.reduce((n, s) => n + s.items.length, 0)
+    : mainNav.length || 6;
 
   return (
     <aside className="flex h-full w-[260px] shrink-0 flex-col border-r border-border/60 bg-sidebar">
@@ -85,37 +148,53 @@ export function DashboardSidebar() {
       ) : null}
 
       <nav className="flex flex-1 flex-col gap-6 overflow-y-auto p-4" aria-label="Dashboard">
-        <div className="space-y-1">
-          <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Menu
-          </p>
-          {navLoading
-            ? Array.from({ length: 5 }, (_, index) => (
-                <div
-                  key={`nav-skeleton-${index}`}
-                  className="mx-3 h-10 animate-pulse rounded-xl bg-muted/60"
-                  aria-hidden
-                />
-              ))
-            : mainNav.map(({ href, label, icon: Icon }) => {
-                const active = pathname === href || pathname.startsWith(`${href}/`);
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    className={cn(
-                      "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
-                      active
-                        ? "sidebar-nav-active"
-                        : "text-sidebar-foreground hover:bg-muted hover:text-foreground",
-                    )}
-                  >
-                    <Icon className="size-4 shrink-0" aria-hidden />
-                    {label}
-                  </Link>
-                );
-              })}
-        </div>
+        {navLoading ? (
+          <div className="space-y-1">
+            <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Menu
+            </p>
+            {Array.from({ length: skeletonCount }, (_, index) => (
+              <div
+                key={`nav-skeleton-${index}`}
+                className="mx-3 h-10 animate-pulse rounded-xl bg-muted/60"
+                aria-hidden
+              />
+            ))}
+          </div>
+        ) : navSections ? (
+          navSections.map((section) => (
+            <div key={section.label} className="space-y-1">
+              <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {section.label}
+              </p>
+              <SidebarNavLinks items={section.items} pathname={pathname} allItems={mainNav} />
+            </div>
+          ))
+        ) : (
+          <div className="space-y-1">
+            <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Menu
+            </p>
+            <SidebarNavLinks items={mainNav} pathname={pathname} allItems={mainNav} />
+          </div>
+        )}
+
+        {!navLoading && patientBookingUrl ? (
+          <div className="space-y-1">
+            <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Shortcuts
+            </p>
+            <a
+              href={patientBookingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={navLinkClass(false)}
+            >
+              <ExternalLink className="size-4 shrink-0" aria-hidden />
+              Patient booking page
+            </a>
+          </div>
+        ) : null}
 
         <div className="space-y-1">
           <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -124,16 +203,7 @@ export function DashboardSidebar() {
           {SECONDARY_NAV.map(({ href, label, icon: Icon }) => {
             const active = pathname === href;
             return (
-              <Link
-                key={href}
-                href={href}
-                className={cn(
-                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
-                  active
-                    ? "sidebar-nav-active"
-                    : "text-sidebar-foreground hover:bg-muted hover:text-foreground",
-                )}
-              >
+              <Link key={href} href={href} className={navLinkClass(active)}>
                 <Icon className="size-4 shrink-0" aria-hidden />
                 {label}
               </Link>

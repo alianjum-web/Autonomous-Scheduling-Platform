@@ -2,8 +2,10 @@ import type { LucideIcon } from "lucide-react";
 import {
   Bot,
   CalendarDays,
+  ClipboardList,
   Clock,
   CreditCard,
+  FileSearch,
   LayoutDashboard,
   Settings,
   Stethoscope,
@@ -18,16 +20,35 @@ export interface NavItem {
   icon: LucideIcon;
 }
 
-/** Clinic owner — full clinic management. */
-export const OWNER_NAV: NavItem[] = [
-  { href: "/front-desk", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/doctors", label: "Doctors", icon: Stethoscope },
-  { href: "/patients", label: "Patients", icon: Users },
-  { href: "/appointments", label: "Appointments", icon: CalendarDays },
-  { href: "/chat", label: "AI Triage", icon: Bot },
-  { href: "/settings", label: "Settings", icon: Settings },
-  { href: "/billing", label: "Billing", icon: CreditCard },
+export interface NavSection {
+  label: string;
+  items: NavItem[];
+}
+
+/** Clinic owner — grouped for sidebar (operations vs admin). */
+export const OWNER_NAV_SECTIONS: NavSection[] = [
+  {
+    label: "Operations",
+    items: [
+      { href: "/front-desk", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/appointments", label: "Appointments", icon: CalendarDays },
+      { href: "/patients", label: "Patients", icon: Users },
+      { href: "/chat", label: "Staff triage", icon: Bot },
+    ],
+  },
+  {
+    label: "Admin",
+    items: [
+      { href: "/doctors", label: "Doctors", icon: Stethoscope },
+      { href: "/clinic-docs", label: "Clinic Documents", icon: FileSearch },
+      { href: "/settings", label: "Settings", icon: Settings },
+      { href: "/billing", label: "Billing", icon: CreditCard },
+    ],
+  },
 ];
+
+/** Flat owner nav — derived from sections for route helpers and tests. */
+export const OWNER_NAV: NavItem[] = OWNER_NAV_SECTIONS.flatMap((section) => section.items);
 
 /** Invited doctor — keep navigation minimal (5 items). */
 export const DOCTOR_NAV: NavItem[] = [
@@ -35,6 +56,8 @@ export const DOCTOR_NAV: NavItem[] = [
   { href: "/appointments", label: "Appointments", icon: CalendarDays },
   { href: "/patients", label: "Patients", icon: Users },
   { href: "/schedule", label: "Schedule", icon: Clock },
+  { href: "/doctor/triage", label: "Triage queue", icon: Bot },
+  { href: "/doctor/intake", label: "Intake forms", icon: ClipboardList },
   { href: "/settings", label: "Profile", icon: Settings },
 ];
 
@@ -43,7 +66,7 @@ export const STAFF_NAV: NavItem[] = [
   { href: "/front-desk", label: "Dashboard", icon: LayoutDashboard },
   { href: "/appointments", label: "Appointments", icon: CalendarDays },
   { href: "/patients", label: "Patients", icon: Users },
-  { href: "/chat", label: "AI Triage", icon: Bot },
+  { href: "/chat", label: "Staff triage", icon: Bot },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -52,6 +75,12 @@ export function navForRole(role: ClinicRole | null): NavItem[] {
   if (role === "doctor") return DOCTOR_NAV;
   if (role === "clinic_admin") return STAFF_NAV;
   return [];
+}
+
+/** Grouped sidebar sections — owner only; other roles use a single Menu block. */
+export function navSectionsForRole(role: ClinicRole | null): NavSection[] | null {
+  if (role === "admin") return OWNER_NAV_SECTIONS;
+  return null;
 }
 
 export function defaultHomeForRole(

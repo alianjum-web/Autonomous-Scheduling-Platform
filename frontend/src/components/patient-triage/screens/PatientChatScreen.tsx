@@ -42,7 +42,7 @@ export function PatientChatScreen() {
     <PageShell maxWidth="2xl" className="flex flex-1 flex-col gap-6 pb-12">
       <PageHeader
         eyebrow="Clinic staff"
-        title="AI Triage"
+        title="Staff triage"
         description="Internal triage workspace for clinic owners and admin staff. Patients book without accounts on your public clinic page."
         imageKey="chat"
       />
@@ -64,7 +64,7 @@ export function PatientChatScreen() {
             <div className="flex-1 space-y-1">
               <p className="font-medium">Clinic sign-in required</p>
               <p className="text-sm text-muted-foreground">
-                AI Triage is for authenticated clinic owners and staff — not for patient self-signup.
+                Staff triage is for authenticated clinic owners and front desk — not for patient self-signup.
               </p>
             </div>
             <Button asChild size="sm">

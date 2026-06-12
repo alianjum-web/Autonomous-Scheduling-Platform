@@ -26,7 +26,7 @@ export function SiteFooter() {
               <p className="font-semibold text-foreground">Product</p>
               <div className="flex flex-col gap-2.5 text-muted-foreground">
                 <Link href="/chat" className="transition-colors hover:text-foreground">
-                  AI Triage (staff)
+                  Staff triage
                 </Link>
                 <Link href="/front-desk" className="transition-colors hover:text-foreground">
                   Front Desk
