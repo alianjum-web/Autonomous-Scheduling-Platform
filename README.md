@@ -211,12 +211,13 @@ npm run stop           # tear down Docker services
 **Option B — Local hot-reload backend (recommended for backend work)**
 
 ```bash
-npm run stop                              # free port 8000
-cd backend && npm run dev                 # Uvicorn --reload on :8000
+cd backend && npm run dev                 # auto-stops Docker API if needed, then Uvicorn on :8000
 cd frontend && npm run dev                # separate terminal
 ```
 
-> Only one process can bind port **8000** — stop the Docker `api` service before running `backend/npm run dev`.
+Or from repo root: `npm run dev:backend:local`
+
+> Only one process can bind port **8000**. `backend/npm run dev` automatically stops the Docker `api` container (or a stale local Uvicorn) if it is still running. Use `npm run stop` to shut down Docker API + Redis manually.
 
 **URLs**
 
